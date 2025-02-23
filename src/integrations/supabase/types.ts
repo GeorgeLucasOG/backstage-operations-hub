@@ -9,7 +9,214 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      menu_categories: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          restaurant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          restaurant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          restaurant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_categories_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_products: {
+        Row: {
+          created_at: string | null
+          id: string
+          order_id: number
+          price: number
+          product_id: string
+          quantity: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          order_id: number
+          price: number
+          product_id: string
+          quantity: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          order_id?: number
+          price?: number
+          product_id?: string
+          quantity?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_products_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          consumption_method: Database["public"]["Enums"]["consumption_method"]
+          created_at: string | null
+          customer_cpf: string
+          customer_name: string
+          id: number
+          restaurant_id: string
+          status: Database["public"]["Enums"]["order_status"]
+          total: number
+          updated_at: string | null
+        }
+        Insert: {
+          consumption_method: Database["public"]["Enums"]["consumption_method"]
+          created_at?: string | null
+          customer_cpf: string
+          customer_name: string
+          id?: number
+          restaurant_id: string
+          status?: Database["public"]["Enums"]["order_status"]
+          total: number
+          updated_at?: string | null
+        }
+        Update: {
+          consumption_method?: Database["public"]["Enums"]["consumption_method"]
+          created_at?: string | null
+          customer_cpf?: string
+          customer_name?: string
+          id?: number
+          restaurant_id?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          total?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          image_url: string
+          ingredients: string[]
+          menu_category_id: string
+          name: string
+          price: number
+          restaurant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          image_url: string
+          ingredients: string[]
+          menu_category_id: string
+          name: string
+          price: number
+          restaurant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          image_url?: string
+          ingredients?: string[]
+          menu_category_id?: string
+          name?: string
+          price?: number
+          restaurant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_menu_category_id_fkey"
+            columns: ["menu_category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurants: {
+        Row: {
+          avatar_image_url: string
+          cover_image_url: string
+          created_at: string | null
+          description: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_image_url: string
+          cover_image_url: string
+          created_at?: string | null
+          description: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_image_url?: string
+          cover_image_url?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +225,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      consumption_method: "TAKEAWAY" | "DINE_IN"
+      order_status: "PENDING" | "IN_PREPARATION" | "FINISHED"
     }
     CompositeTypes: {
       [_ in never]: never
