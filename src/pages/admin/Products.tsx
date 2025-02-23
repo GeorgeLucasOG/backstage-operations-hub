@@ -43,25 +43,25 @@ const Products = () => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Products</h1>
+        <h1 className="text-2xl font-bold">Produtos</h1>
         <Button>
           <Plus className="h-4 w-4 mr-2" />
-          Add Product
+          Adicionar Produto
         </Button>
       </div>
 
       {isLoading ? (
-        <div>Loading...</div>
+        <div>Carregando...</div>
       ) : (
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Image</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>Imagem</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Preço</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -87,10 +87,10 @@ const Products = () => {
                   <TableCell>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm">
-                        Edit
+                        Editar
                       </Button>
                       <Button variant="destructive" size="sm">
-                        Delete
+                        Excluir
                       </Button>
                     </div>
                   </TableCell>

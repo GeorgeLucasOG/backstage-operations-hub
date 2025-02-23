@@ -23,10 +23,10 @@ const AdminLayout = () => {
   };
 
   const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
-    { icon: Coffee, label: "Products", path: "/admin/products" },
-    { icon: MenuIcon, label: "Menu", path: "/admin/menu" },
-    { icon: ShoppingCart, label: "Orders", path: "/admin/orders" },
+    { icon: LayoutDashboard, label: "Painel", path: "/admin" },
+    { icon: Coffee, label: "Produtos", path: "/admin/products" },
+    { icon: MenuIcon, label: "Cardápio", path: "/admin/menu" },
+    { icon: ShoppingCart, label: "Pedidos", path: "/admin/orders" },
   ];
 
   return (
@@ -34,7 +34,7 @@ const AdminLayout = () => {
       <div className="min-h-screen flex w-full">
         <Sidebar>
           <SidebarHeader className="border-b p-4">
-            <h2 className="text-lg font-semibold">Admin Panel</h2>
+            <h2 className="text-lg font-semibold">Painel Administrativo</h2>
           </SidebarHeader>
           <SidebarContent className="p-2">
             <nav className="space-y-2">
@@ -55,7 +55,7 @@ const AdminLayout = () => {
                 onClick={handleLogout}
               >
                 <LogOut className="h-4 w-4" />
-                Logout
+                Sair
               </Button>
             </nav>
           </SidebarContent>
