@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Coffee, Menu as MenuIcon, ShoppingCart, LogOut } from "lucide-react";
+import { LayoutDashboard, Coffee, Menu as MenuIcon, ShoppingCart, Store, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const AdminLayout = () => {
@@ -24,6 +24,7 @@ const AdminLayout = () => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Painel", path: "/admin" },
+    { icon: Store, label: "Restaurantes", path: "/admin/restaurants" },
     { icon: Coffee, label: "Produtos", path: "/admin/products" },
     { icon: MenuIcon, label: "Cardápio", path: "/admin/menu" },
     { icon: ShoppingCart, label: "Pedidos", path: "/admin/orders" },
