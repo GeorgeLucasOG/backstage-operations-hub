@@ -9,6 +9,243 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      accounts_payable: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string
+          due_date: string
+          id: string
+          paid_date: string | null
+          restaurant_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description: string
+          due_date: string
+          id?: string
+          paid_date?: string | null
+          restaurant_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string
+          due_date?: string
+          id?: string
+          paid_date?: string | null
+          restaurant_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_payable_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts_receivable: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string
+          due_date: string
+          id: string
+          received_date: string | null
+          restaurant_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description: string
+          due_date: string
+          id?: string
+          received_date?: string | null
+          restaurant_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string
+          due_date?: string
+          id?: string
+          received_date?: string | null
+          restaurant_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_movements: {
+        Row: {
+          amount: number
+          cash_register_id: string
+          created_at: string | null
+          description: string
+          id: string
+          order_id: number | null
+          payment_method: string
+          restaurant_id: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          cash_register_id: string
+          created_at?: string | null
+          description: string
+          id?: string
+          order_id?: number | null
+          payment_method: string
+          restaurant_id: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          cash_register_id?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          order_id?: number | null
+          payment_method?: string
+          restaurant_id?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_registers: {
+        Row: {
+          closed_at: string | null
+          created_at: string | null
+          current_amount: number
+          id: string
+          initial_amount: number
+          name: string
+          opened_at: string | null
+          restaurant_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string | null
+          current_amount?: number
+          id?: string
+          initial_amount?: number
+          name: string
+          opened_at?: string | null
+          restaurant_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string | null
+          current_amount?: number
+          id?: string
+          initial_amount?: number
+          name?: string
+          opened_at?: string | null
+          restaurant_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_registers_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingredients: {
+        Row: {
+          created_at: string | null
+          id: string
+          min_quantity: number
+          name: string
+          quantity: number
+          restaurant_id: string
+          unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          min_quantity?: number
+          name: string
+          quantity?: number
+          restaurant_id: string
+          unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          min_quantity?: number
+          name?: string
+          quantity?: number
+          restaurant_id?: string
+          unit?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredients_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_categories: {
         Row: {
           created_at: string | null
@@ -95,6 +332,7 @@ export type Database = {
           id: number
           restaurant_id: string
           status: Database["public"]["Enums"]["order_status"]
+          table_number: number | null
           total: number
           updated_at: string | null
         }
@@ -106,6 +344,7 @@ export type Database = {
           id?: number
           restaurant_id: string
           status?: Database["public"]["Enums"]["order_status"]
+          table_number?: number | null
           total: number
           updated_at?: string | null
         }
@@ -117,6 +356,7 @@ export type Database = {
           id?: number
           restaurant_id?: string
           status?: Database["public"]["Enums"]["order_status"]
+          table_number?: number | null
           total?: number
           updated_at?: string | null
         }
@@ -216,6 +456,54 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          ingredient_id: string
+          quantity: number
+          restaurant_id: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          ingredient_id: string
+          quantity: number
+          restaurant_id: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          ingredient_id?: string
+          quantity?: number
+          restaurant_id?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
