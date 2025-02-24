@@ -12,33 +12,39 @@ export type Database = {
       accounts_payable: {
         Row: {
           amount: number
+          boleto_code: string | null
           created_at: string | null
           description: string
           due_date: string
           id: string
           paid_date: string | null
+          pix_key: string | null
           restaurant_id: string
           status: string
           updated_at: string | null
         }
         Insert: {
           amount: number
+          boleto_code?: string | null
           created_at?: string | null
           description: string
           due_date: string
           id?: string
           paid_date?: string | null
+          pix_key?: string | null
           restaurant_id: string
           status?: string
           updated_at?: string | null
         }
         Update: {
           amount?: number
+          boleto_code?: string | null
           created_at?: string | null
           description?: string
           due_date?: string
           id?: string
           paid_date?: string | null
+          pix_key?: string | null
           restaurant_id?: string
           status?: string
           updated_at?: string | null
@@ -56,10 +62,12 @@ export type Database = {
       accounts_receivable: {
         Row: {
           amount: number
+          boleto_code: string | null
           created_at: string | null
           description: string
           due_date: string
           id: string
+          pix_key: string | null
           received_date: string | null
           restaurant_id: string
           status: string
@@ -67,10 +75,12 @@ export type Database = {
         }
         Insert: {
           amount: number
+          boleto_code?: string | null
           created_at?: string | null
           description: string
           due_date: string
           id?: string
+          pix_key?: string | null
           received_date?: string | null
           restaurant_id: string
           status?: string
@@ -78,10 +88,12 @@ export type Database = {
         }
         Update: {
           amount?: number
+          boleto_code?: string | null
           created_at?: string | null
           description?: string
           due_date?: string
           id?: string
+          pix_key?: string | null
           received_date?: string | null
           restaurant_id?: string
           status?: string

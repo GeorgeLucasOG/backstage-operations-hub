@@ -11,13 +11,15 @@ import { useQuery } from "@tanstack/react-query";
 type AccountPayable = {
   id: string;
   description: string;
-  pix_key: string;
-  boleto_code: string;
+  pix_key: string | null;
+  boleto_code: string | null;
   created_at: string;
   due_date: string;
+  paid_date: string | null;
   restaurant_id: string;
   amount: number;
   status: string;
+  updated_at: string;
 };
 
 const AccountsPayable = () => {
