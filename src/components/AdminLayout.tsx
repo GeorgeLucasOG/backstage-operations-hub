@@ -3,7 +3,17 @@ import { useEffect } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Coffee, List, ShoppingCart, Store, LogOut } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Coffee, 
+  List, 
+  ShoppingCart, 
+  Store, 
+  LogOut,
+  Receipt,
+  DollarSign,
+  Package
+} from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const AdminLayout = () => {
@@ -28,6 +38,10 @@ const AdminLayout = () => {
     { icon: Coffee, label: "Produtos", path: "/admin/products" },
     { icon: List, label: "Categorias", path: "/admin/menu" },
     { icon: ShoppingCart, label: "Pedidos", path: "/admin/orders" },
+    { icon: Package, label: "Estoque", path: "/admin/inventory" },
+    { icon: Receipt, label: "Contas a Receber", path: "/admin/accounts-receivable" },
+    { icon: DollarSign, label: "Contas a Pagar", path: "/admin/accounts-payable" },
+    { icon: ShoppingCart, label: "Caixa", path: "/admin/cash" },
   ];
 
   return (

@@ -13,6 +13,10 @@ import Products from "./pages/admin/Products";
 import Restaurant from "./pages/admin/Restaurant";
 import Categories from "./pages/admin/Categories";
 import Orders from "./pages/admin/Orders";
+import Inventory from "./pages/admin/Inventory";
+import AccountsPayable from "./pages/admin/AccountsPayable";
+import AccountsReceivable from "./pages/admin/AccountsReceivable";
+import Cash from "./pages/admin/Cash";
 import NotFound from "./pages/NotFound";
 
 // Create a client
@@ -43,6 +47,10 @@ const App: React.FC = () => {
                 <Route path="products" element={<Products />} />
                 <Route path="menu" element={<Categories />} />
                 <Route path="orders" element={<Orders />} />
+                <Route path="inventory" element={<Inventory />} />
+                <Route path="accounts-payable" element={<AccountsPayable />} />
+                <Route path="accounts-receivable" element={<AccountsReceivable />} />
+                <Route path="cash" element={<Cash />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
