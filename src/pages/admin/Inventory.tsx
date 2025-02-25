@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,9 +42,10 @@ interface Ingredient {
 interface Supplier {
   id: string;
   name: string;
+  company_name: string | null;
   email: string;
   phone: string;
-  document: string;
+  cnpj: string | null;
   address: string;
   restaurant_id: string;
 }
@@ -71,9 +71,10 @@ const Inventory = () => {
   });
   const [newSupplier, setNewSupplier] = useState({
     name: "",
+    company_name: "",
     email: "",
     phone: "",
-    document: "",
+    cnpj: "",
     address: "",
   });
   const [movementData, setMovementData] = useState({
@@ -83,7 +84,6 @@ const Inventory = () => {
     description: "",
   });
 
-  // Carregar ingredientes
   const { data: ingredients, refetch: refetchIngredients } = useQuery({
     queryKey: ["ingredients"],
     queryFn: async () => {
@@ -97,7 +97,6 @@ const Inventory = () => {
     },
   });
 
-  // Carregar fornecedores
   const { data: suppliers } = useQuery({
     queryKey: ["suppliers"],
     queryFn: async () => {
@@ -111,7 +110,6 @@ const Inventory = () => {
     },
   });
 
-  // Carregar movimentações
   const { data: movements, refetch: refetchMovements } = useQuery({
     queryKey: ["stock-movements"],
     queryFn: async () => {
@@ -134,7 +132,7 @@ const Inventory = () => {
         unit: newIngredient.unit,
         alert_threshold: parseFloat(newIngredient.alert_threshold),
         supplier_id: newIngredient.supplier_id || null,
-        restaurant_id: "temp-id", // Substituir pelo ID real do restaurante
+        restaurant_id: "temp-id",
       });
 
       if (error) throw error;
@@ -166,7 +164,7 @@ const Inventory = () => {
     try {
       const { error } = await supabase.from("suppliers").insert({
         ...newSupplier,
-        restaurant_id: "temp-id", // Substituir pelo ID real do restaurante
+        restaurant_id: "temp-id",
       });
 
       if (error) throw error;
@@ -178,9 +176,10 @@ const Inventory = () => {
 
       setNewSupplier({
         name: "",
+        company_name: "",
         email: "",
         phone: "",
-        document: "",
+        cnpj: "",
         address: "",
       });
       refetchIngredients();
@@ -210,18 +209,16 @@ const Inventory = () => {
         newQuantity -= movementQuantity;
       }
 
-      // Registrar movimento
       const { error: movementError } = await supabase.from("stock_movements").insert({
         ingredient_id: movementData.ingredient_id,
         type: movementData.type,
         quantity: movementQuantity,
         description: movementData.description,
-        restaurant_id: "temp-id", // Substituir pelo ID real do restaurante
+        restaurant_id: "temp-id",
       });
 
       if (movementError) throw movementError;
 
-      // Atualizar quantidade do ingrediente
       const { error: updateError } = await supabase
         .from("ingredients")
         .update({ quantity: newQuantity })
@@ -229,7 +226,6 @@ const Inventory = () => {
 
       if (updateError) throw updateError;
 
-      // Verificar se precisa emitir alerta de estoque baixo
       if (newQuantity <= ingredient.alert_threshold) {
         toast({
           title: "Alerta de Estoque",
@@ -352,9 +348,19 @@ const Inventory = () => {
               </SheetHeader>
               <div className="space-y-4 py-4">
                 <Input
-                  placeholder="Nome"
+                  placeholder="Nome Fantasia"
                   value={newSupplier.name}
                   onChange={(e) => setNewSupplier(prev => ({ ...prev, name: e.target.value }))}
+                />
+                <Input
+                  placeholder="Razão Social (opcional)"
+                  value={newSupplier.company_name}
+                  onChange={(e) => setNewSupplier(prev => ({ ...prev, company_name: e.target.value }))}
+                />
+                <Input
+                  placeholder="CNPJ (opcional)"
+                  value={newSupplier.cnpj}
+                  onChange={(e) => setNewSupplier(prev => ({ ...prev, cnpj: e.target.value }))}
                 />
                 <Input
                   placeholder="Email"
@@ -366,11 +372,6 @@ const Inventory = () => {
                   placeholder="Telefone"
                   value={newSupplier.phone}
                   onChange={(e) => setNewSupplier(prev => ({ ...prev, phone: e.target.value }))}
-                />
-                <Input
-                  placeholder="Documento"
-                  value={newSupplier.document}
-                  onChange={(e) => setNewSupplier(prev => ({ ...prev, document: e.target.value }))}
                 />
                 <Input
                   placeholder="Endereço"
@@ -490,10 +491,11 @@ const Inventory = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nome</TableHead>
+              <TableHead>Nome Fantasia</TableHead>
+              <TableHead>Razão Social</TableHead>
+              <TableHead>CNPJ</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Telefone</TableHead>
-              <TableHead>Documento</TableHead>
               <TableHead>Endereço</TableHead>
             </TableRow>
           </TableHeader>
@@ -501,9 +503,10 @@ const Inventory = () => {
             {suppliers?.map((supplier) => (
               <TableRow key={supplier.id}>
                 <TableCell>{supplier.name}</TableCell>
+                <TableCell>{supplier.company_name || "-"}</TableCell>
+                <TableCell>{supplier.cnpj || "-"}</TableCell>
                 <TableCell>{supplier.email}</TableCell>
                 <TableCell>{supplier.phone}</TableCell>
-                <TableCell>{supplier.document}</TableCell>
                 <TableCell>{supplier.address}</TableCell>
               </TableRow>
             ))}
