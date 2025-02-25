@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,10 +44,10 @@ interface Supplier {
   id: string;
   name: string;
   company_name: string | null;
-  email: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
   cnpj: string | null;
-  address: string;
+  address: string | null;
   restaurant_id: string;
 }
 
@@ -164,7 +165,7 @@ const Inventory = () => {
     try {
       const { error } = await supabase.from("suppliers").insert({
         ...newSupplier,
-        restaurant_id: "temp-id",
+        restaurant_id: "temp-id", // Substituir pelo ID real do restaurante
       });
 
       if (error) throw error;
