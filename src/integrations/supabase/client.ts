@@ -7,8 +7,4 @@ import { DATABASE_CONFIG } from '@/config/database';
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(DATABASE_CONFIG.url, DATABASE_CONFIG.key, {
-  db: {
-    schema: 'public'
-  }
-});
+export const supabase = createClient<Database>(DATABASE_CONFIG.url, DATABASE_CONFIG.key);
