@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Store } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -110,18 +109,29 @@ const Restaurant = () => {
   const queryClient = useQueryClient();
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
 
-  const { data: restaurants, isLoading } = useQuery({
+  const { data: restaurants, isLoading, error } = useQuery({
     queryKey: ["restaurants"],
     queryFn: async () => {
+      console.log("Iniciando busca de restaurantes...");
       const { data, error } = await supabase
         .from("restaurants")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao buscar restaurantes:", error);
+        throw error;
+      }
+
+      console.log("Restaurantes encontrados:", data);
       return data as Restaurant[];
     },
   });
+
+  if (error) {
+    console.error("Erro na query:", error);
+    return <div>Erro ao carregar restaurantes: {(error as Error).message}</div>;
+  }
 
   const createMutation = useMutation({
     mutationFn: async (newRestaurant: RestaurantFormData) => {
