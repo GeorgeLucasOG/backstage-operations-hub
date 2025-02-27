@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { AddProductSheet } from "./components/AddProductSheet";
 
 interface Product {
   id: string;
@@ -20,8 +21,8 @@ interface Product {
   price: number;
   image_url: string;
   ingredients: string[];
-  menu_category_id: string;
-  restaurant_id: string;
+  categoria_id: string;
+  estabelecimento_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -31,7 +32,7 @@ const Products = () => {
     queryKey: ["products"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("products")
+        .from("produtos")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -44,10 +45,12 @@ const Products = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Produtos</h1>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Produto
-        </Button>
+        <AddProductSheet>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Produto
+          </Button>
+        </AddProductSheet>
       </div>
 
       {isLoading ? (
