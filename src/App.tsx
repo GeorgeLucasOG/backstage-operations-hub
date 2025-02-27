@@ -1,54 +1,64 @@
 
-import "./App.css";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { AdminLayout } from "./components/AdminLayout";
-import Dashboard from "./pages/admin/Dashboard";
-import Restaurant from "./pages/admin/Restaurant";
-import Products from "./pages/admin/Products";
-import Categories from "./pages/admin/Categories";
-import Inventory from "./pages/admin/Inventory";
-import Cash from "./pages/admin/Cash";
-import Orders from "./pages/admin/Orders";
-import AccountsPayable from "./pages/admin/AccountsPayable";
-import AccountsReceivable from "./pages/admin/AccountsReceivable";
-import NotFound from "./pages/NotFound";
+import React from "react";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import AdminLayout from "./components/AdminLayout";
+import Dashboard from "./pages/admin/Dashboard";
+import Products from "./pages/admin/Products";
+import Restaurant from "./pages/admin/Restaurant";
+import Categories from "./pages/admin/Categories";
+import Orders from "./pages/admin/Orders";
+import Inventory from "./pages/admin/Inventory";
+import AccountsPayable from "./pages/admin/AccountsPayable";
+import AccountsReceivable from "./pages/admin/AccountsReceivable";
+import Cash from "./pages/admin/Cash";
+import NotFound from "./pages/NotFound";
 
-// Cliente pages
-import ClientHome from "./pages/ClientHome";
-import RestaurantMenu from "./pages/RestaurantMenu";
-import Checkout from "./pages/Checkout";
-import OrderConfirmation from "./pages/OrderConfirmation";
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: false,
+    },
+  },
+});
 
-function App() {
+// Make App a proper React component with explicit return
+const App: React.FC = () => {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      
-      {/* Cliente Routes */}
-      <Route path="/" element={<ClientHome />} />
-      <Route path="/restaurant/:slug/menu" element={<RestaurantMenu />} />
-      <Route path="/restaurant/:slug/checkout" element={<Checkout />} />
-      <Route path="/restaurant/:slug/confirmation/:orderId" element={<OrderConfirmation />} />
-      
-      {/* Admin Routes */}
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<Navigate to="/admin/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="restaurant" element={<Restaurant />} />
-        <Route path="products" element={<Products />} />
-        <Route path="categories" element={<Categories />} />
-        <Route path="inventory" element={<Inventory />} />
-        <Route path="cash" element={<Cash />} />
-        <Route path="orders" element={<Orders />} />
-        <Route path="accounts-payable" element={<AccountsPayable />} />
-        <Route path="accounts-receivable" element={<AccountsReceivable />} />
-      </Route>
-
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="restaurants" element={<Restaurant />} />
+                <Route path="products" element={<Products />} />
+                <Route path="menu" element={<Categories />} />
+                <Route path="orders" element={<Orders />} />
+                <Route path="inventory" element={<Inventory />} />
+                <Route path="accounts-payable" element={<AccountsPayable />} />
+                <Route path="accounts-receivable" element={<AccountsReceivable />} />
+                <Route path="cash" element={<Cash />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </React.StrictMode>
   );
-}
+};
 
 export default App;
