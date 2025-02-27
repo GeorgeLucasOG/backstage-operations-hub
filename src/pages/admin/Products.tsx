@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { AddProductSheet } from "./components/AddProductSheet";
 
 interface Product {
   id: string;
@@ -45,12 +44,10 @@ const Products = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Produtos</h1>
-        <AddProductSheet>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Produto
-          </Button>
-        </AddProductSheet>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Adicionar Produto
+        </Button>
       </div>
 
       {isLoading ? (
