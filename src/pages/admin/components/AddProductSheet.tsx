@@ -49,13 +49,13 @@ export function AddProductSheet({ children }: AddProductSheetProps) {
         throw new Error("Por favor, preencha todos os campos obrigatórios");
       }
 
-      const { data, error } = await supabase.from("produtos").insert({
+      const { data, error } = await supabase.from("products").insert({
         name: formData.name,
         description: formData.description || "",
         price: parseFloat(formData.price),
         image_url: formData.image_url || "https://via.placeholder.com/150",
-        categoria_id: formData.categoria_id,
-        estabelecimento_id: DEFAULT_RESTAURANT_ID,
+        menu_category_id: formData.categoria_id,
+        restaurant_id: DEFAULT_RESTAURANT_ID,
         ingredients: formData.ingredients,
       });
 

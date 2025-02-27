@@ -21,8 +21,8 @@ interface Product {
   price: number;
   image_url: string;
   ingredients: string[];
-  categoria_id: string;
-  estabelecimento_id: string;
+  menu_category_id: string;
+  restaurant_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -32,7 +32,7 @@ const Products = () => {
     queryKey: ["products"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("produtos")
+        .from("products")
         .select("*")
         .order("created_at", { ascending: false });
 
