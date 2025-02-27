@@ -12,7 +12,7 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Ingredient } from "../types";
 
@@ -49,7 +49,7 @@ export function StockMovementSheet({ ingredient, onSuccess }: StockMovementSheet
         type: movementData.type,
         quantity: movementQuantity,
         description: movementData.description,
-        restaurant_id: "temp-id",
+        restaurant_id: DEFAULT_RESTAURANT_ID,
       });
 
       if (movementError) throw movementError;
