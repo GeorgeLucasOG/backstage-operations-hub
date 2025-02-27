@@ -8,3 +8,6 @@ import { DATABASE_CONFIG } from '@/config/database';
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(DATABASE_CONFIG.url, DATABASE_CONFIG.key);
+
+// Default restaurant ID to use throughout the application
+export const DEFAULT_RESTAURANT_ID = "d2d5278d-8df1-4819-87a0-f23b519e3f2a";

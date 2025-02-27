@@ -13,7 +13,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Plus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
 interface AddSupplierSheetProps {
@@ -35,7 +35,7 @@ export function AddSupplierSheet({ onSuccess }: AddSupplierSheetProps) {
     try {
       const { error } = await supabase.from("suppliers").insert({
         ...newSupplier,
-        restaurant_id: "temp-id",
+        restaurant_id: DEFAULT_RESTAURANT_ID,
       });
 
       if (error) throw error;
@@ -55,6 +55,7 @@ export function AddSupplierSheet({ onSuccess }: AddSupplierSheetProps) {
       });
       onSuccess();
     } catch (error) {
+      console.error("Erro ao adicionar fornecedor:", error);
       toast({
         title: "Erro",
         description: "Erro ao adicionar fornecedor",

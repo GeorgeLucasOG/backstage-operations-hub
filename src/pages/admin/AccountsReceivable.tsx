@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
 type AccountReceivable = {
@@ -53,7 +53,7 @@ const AccountsReceivable = () => {
         boleto_code: boletoCode,
         due_date: dueDate,
         amount: parseFloat(amount),
-        restaurant_id: "temp-id", // Você precisará obter o ID do restaurante real
+        restaurant_id: DEFAULT_RESTAURANT_ID,
         status: "PENDING"
       });
 
@@ -74,6 +74,7 @@ const AccountsReceivable = () => {
       // Recarregar dados
       refetch();
     } catch (error) {
+      console.error("Erro ao criar conta a receber:", error);
       toast({
         title: "Erro",
         description: "Erro ao criar conta a receber",

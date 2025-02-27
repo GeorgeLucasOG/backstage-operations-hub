@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import {
   Sheet,
@@ -95,7 +95,7 @@ const Cash = () => {
         current_amount: parseFloat(initialAmount),
         opened_at: new Date().toISOString(),
         status: "OPEN",
-        restaurant_id: "temp-id" // Substituir pelo ID real do restaurante
+        restaurant_id: DEFAULT_RESTAURANT_ID
       });
 
       if (error) throw error;
@@ -109,6 +109,7 @@ const Cash = () => {
       setInitialAmount("");
       refetchRegisters();
     } catch (error) {
+      console.error("Erro ao abrir o caixa:", error);
       toast({
         title: "Erro",
         description: "Erro ao abrir o caixa",
@@ -139,6 +140,7 @@ const Cash = () => {
 
       refetchRegisters();
     } catch (error) {
+      console.error("Erro ao fechar o caixa:", error);
       toast({
         title: "Erro",
         description: "Erro ao fechar o caixa",
@@ -178,7 +180,7 @@ const Cash = () => {
         type,
         description,
         payment_method: paymentMethod,
-        restaurant_id: currentRegister.restaurant_id
+        restaurant_id: DEFAULT_RESTAURANT_ID
       });
 
       if (movementError) throw movementError;
@@ -203,6 +205,7 @@ const Cash = () => {
       refetchRegisters();
       refetchMovements();
     } catch (error) {
+      console.error("Erro ao registrar movimento:", error);
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Erro ao registrar movimento",

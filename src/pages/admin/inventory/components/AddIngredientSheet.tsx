@@ -13,7 +13,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Plus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Supplier } from "../types";
 
@@ -42,7 +42,7 @@ export function AddIngredientSheet({ suppliers, onSuccess }: AddIngredientSheetP
         unit: newIngredient.unit,
         alert_threshold: parseFloat(newIngredient.alert_threshold),
         supplier_id: newIngredient.supplier_id || null,
-        restaurant_id: "temp-id",
+        restaurant_id: DEFAULT_RESTAURANT_ID,
       });
 
       if (error) throw error;
@@ -62,6 +62,7 @@ export function AddIngredientSheet({ suppliers, onSuccess }: AddIngredientSheetP
       });
       onSuccess();
     } catch (error) {
+      console.error("Erro ao adicionar ingrediente:", error);
       toast({
         title: "Erro",
         description: "Erro ao adicionar ingrediente",
