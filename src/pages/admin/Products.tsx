@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,12 +30,17 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  image_url: string | null; // Tornando compatível com outras aplicações que podem ter campo nulo
-  ingredients: string[] | null; // Tornando compatível com outras aplicações que podem ter campo nulo
-  menu_category_id: string | null; // Tornando compatível com outras aplicações que podem ter campo nulo
-  restaurant_id: string;
-  created_at: string;
-  updated_at: string;
+  image_url?: string | null;
+  imageUrl?: string | null; // Compatibilidade com campo alternativo
+  ingredients?: string[] | null;
+  menu_category_id?: string | null;
+  menuCategoryId?: string | null; // Compatibilidade com campo alternativo
+  restaurant_id?: string;
+  restaurantId?: string; // Compatibilidade com campo alternativo
+  created_at?: string;
+  createdAt?: string; // Compatibilidade com campo alternativo
+  updated_at?: string;
+  updatedAt?: string; // Compatibilidade com campo alternativo
 }
 
 const Products = () => {
@@ -52,31 +58,35 @@ const Products = () => {
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      // Tentando consultar produtos através do nome 'products' (original)
+      // Consulta direta na tabela Product usando o nome correto da tabela
       const { data: productsData, error: productsError } = await supabase
+        .from("Product")
+        .select("*")
+        .order("createdAt", { ascending: false });
+
+      if (productsError) {
+        console.error("Erro ao consultar tabela Product:", productsError);
+        throw new Error("Não foi possível carregar os produtos");
+      }
+
+      if (productsData && productsData.length > 0) {
+        console.log("Consulta na tabela Product bem-sucedida:", productsData);
+        return productsData as Product[];
+      }
+
+      // Fallback para a tabela 'products' se não encontrar na 'Product'
+      const { data: fallbackData, error: fallbackError } = await supabase
         .from("products")
         .select("*")
         .order("created_at", { ascending: false });
 
-      // Se a consulta for bem-sucedida, retornamos os dados
-      if (!productsError && productsData) {
-        console.log("Consulta products bem-sucedida:", productsData);
-        return productsData as Product[];
+      if (fallbackError) {
+        console.error("Erro ao consultar tabela fallback:", fallbackError);
+        return [];
       }
 
-      // Se houver erro na primeira consulta, tentamos com o nome alternativo 'produtos'
-      const { data: produtosData, error: produtosError } = await supabase
-        .from("produtos")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (produtosError) {
-        console.error("Erro ao consultar tabela produtos:", produtosError);
-        throw new Error("Não foi possível carregar os produtos");
-      }
-
-      console.log("Consulta produtos bem-sucedida:", produtosData);
-      return produtosData as Product[];
+      console.log("Consulta fallback bem-sucedida:", fallbackData);
+      return fallbackData as Product[];
     },
   });
 
@@ -84,17 +94,25 @@ const Products = () => {
   const { data: categories } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
-      // Tentando consultar categorias através do nome 'menu_categories' (original)
+      // Consulta principal na tabela MenuCategory
       const { data: categoriesData, error: categoriesError } = await supabase
-        .from("menu_categories")
+        .from("MenuCategory")
         .select("*");
 
-      // Se a consulta for bem-sucedida, retornamos os dados
-      if (!categoriesError && categoriesData) {
+      if (!categoriesError && categoriesData && categoriesData.length > 0) {
         return categoriesData;
       }
 
-      // Se houver erro na primeira consulta, tentamos com o nome alternativo 'categorias'
+      // Fallback para a tabela 'menu_categories'
+      const { data: menuCategoriesData, error: menuCategoriesError } = await supabase
+        .from("menu_categories")
+        .select("*");
+
+      if (!menuCategoriesError && menuCategoriesData && menuCategoriesData.length > 0) {
+        return menuCategoriesData;
+      }
+
+      // Segundo fallback para a tabela 'categorias'
       const { data: categoriasData, error: categoriasError } = await supabase
         .from("categorias")
         .select("*");
@@ -104,7 +122,7 @@ const Products = () => {
         return []; // Retornamos array vazio para evitar erros
       }
 
-      return categoriasData;
+      return categoriasData || [];
     },
   });
 
@@ -117,44 +135,39 @@ const Products = () => {
     e.preventDefault();
     
     try {
-      // Tentamos inserir na tabela 'products' primeiro
+      // Preparando o objeto produto com campos compatíveis para qualquer formato
+      const productData = {
+        name: newProduct.name,
+        description: newProduct.description,
+        price: parseFloat(newProduct.price),
+        // Incluindo ambos os formatos de nomes de campos para compatibilidade
+        image_url: newProduct.image_url || "https://via.placeholder.com/150",
+        imageUrl: newProduct.image_url || "https://via.placeholder.com/150",
+        menu_category_id: newProduct.category_id || null,
+        menuCategoryId: newProduct.category_id || null,
+        restaurant_id: DEFAULT_RESTAURANT_ID,
+        restaurantId: DEFAULT_RESTAURANT_ID,
+        ingredients: [],
+      };
+
+      // Tentamos inserir na tabela 'Product' primeiro
       const { data: productData, error: productError } = await supabase
-        .from("products")
-        .insert([
-          {
-            name: newProduct.name,
-            description: newProduct.description,
-            price: parseFloat(newProduct.price),
-            image_url: newProduct.image_url || "https://via.placeholder.com/150",
-            menu_category_id: newProduct.category_id || null,
-            restaurant_id: DEFAULT_RESTAURANT_ID,
-            ingredients: [], // Array vazio por padrão
-          },
-        ])
+        .from("Product")
+        .insert([productData])
         .select()
         .single();
 
-      // Se houver erro na primeira tentativa, tentamos com a tabela 'produtos'
+      // Se houver erro na primeira tentativa, tentamos com a tabela 'products'
       if (productError) {
-        console.log("Erro ao inserir em 'products', tentando 'produtos':", productError);
+        console.log("Erro ao inserir em 'Product', tentando 'products':", productError);
         
-        const { data: produtoData, error: produtoError } = await supabase
-          .from("produtos")
-          .insert([
-            {
-              name: newProduct.name,
-              description: newProduct.description,
-              price: parseFloat(newProduct.price),
-              image_url: newProduct.image_url || "https://via.placeholder.com/150",
-              menu_category_id: newProduct.category_id || null,
-              restaurant_id: DEFAULT_RESTAURANT_ID,
-              ingredients: [], // Array vazio por padrão
-            },
-          ])
+        const { data: productsData, error: productsError } = await supabase
+          .from("products")
+          .insert([productData])
           .select()
           .single();
 
-        if (produtoError) {
+        if (productsError) {
           throw new Error("Não foi possível adicionar o produto");
         }
       }
@@ -184,6 +197,19 @@ const Products = () => {
     }
   };
 
+  // Função auxiliar para obter URL da imagem independente do formato do campo
+  const getImageUrl = (product: Product): string => {
+    return product.image_url || product.imageUrl || "https://via.placeholder.com/150";
+  };
+
+  // Função auxiliar para obter o preço formatado
+  const formatPrice = (price: number): string => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(price);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -198,6 +224,9 @@ const Products = () => {
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Adicionar Novo Produto</DialogTitle>
+              <DialogDescription>
+                Preencha os campos para adicionar um novo produto ao cardápio.
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -289,37 +318,42 @@ const Products = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products?.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <img
-                      src={product.image_url || "https://via.placeholder.com/150"}
-                      alt={product.name}
-                      className="h-12 w-12 object-cover rounded"
-                    />
-                  </TableCell>
-                  <TableCell>{product.name}</TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {product.description}
-                  </TableCell>
-                  <TableCell>
-                    {new Intl.NumberFormat("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    }).format(product.price)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        Editar
-                      </Button>
-                      <Button variant="destructive" size="sm">
-                        Excluir
-                      </Button>
-                    </div>
+              {products && products.length > 0 ? (
+                products.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <img
+                        src={getImageUrl(product)}
+                        alt={product.name}
+                        className="h-12 w-12 object-cover rounded"
+                      />
+                    </TableCell>
+                    <TableCell>{product.name}</TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {product.description}
+                    </TableCell>
+                    <TableCell>
+                      {formatPrice(product.price)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          Editar
+                        </Button>
+                        <Button variant="destructive" size="sm">
+                          Excluir
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-4">
+                    Nenhum produto encontrado
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>
