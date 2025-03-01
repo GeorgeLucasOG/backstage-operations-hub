@@ -28,6 +28,8 @@ type CashRegister = {
   closed_at: string | null;
   status: "OPEN" | "CLOSED";
   restaurant_id: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 type CashMovement = {
@@ -40,6 +42,7 @@ type CashMovement = {
   created_at: string;
   order_id?: number;
   restaurant_id: string;
+  updated_at?: string;
 };
 
 const Cash = () => {

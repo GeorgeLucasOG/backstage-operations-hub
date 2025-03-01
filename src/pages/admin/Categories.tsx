@@ -105,7 +105,7 @@ const Categories = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("menu_categories")
-        .select("*, Restaurant(name)")
+        .select("*, Restaurant:restaurant_id(name)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -274,9 +274,9 @@ const Categories = () => {
                             <SheetTitle>Editar Categoria</SheetTitle>
                           </SheetHeader>
                           <div className="mt-4">
-                            {restaurants && (
+                            {restaurants && editingCategory && (
                               <CategoryForm
-                                initialData={category}
+                                initialData={editingCategory}
                                 onSubmit={(data) =>
                                   updateMutation.mutate({ ...data, id: category.id })
                                 }

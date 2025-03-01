@@ -49,8 +49,8 @@ const AccountsReceivable = () => {
     try {
       const { error } = await supabase.from("accounts_receivable").insert({
         description,
-        pix_key: pixKey,
-        boleto_code: boletoCode,
+        pix_key: pixKey || null,
+        boleto_code: boletoCode || null,
         due_date: dueDate,
         amount: parseFloat(amount),
         restaurant_id: DEFAULT_RESTAURANT_ID,

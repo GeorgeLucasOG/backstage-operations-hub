@@ -30,17 +30,12 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  image_url?: string | null;
-  imageUrl?: string | null; // Compatibilidade com campo alternativo
-  ingredients?: string[] | null;
-  menu_category_id?: string | null;
-  menuCategoryId?: string | null; // Compatibilidade com campo alternativo
-  restaurant_id?: string;
-  restaurantId?: string; // Compatibilidade com campo alternativo
-  created_at?: string;
-  createdAt?: string; // Compatibilidade com campo alternativo
-  updated_at?: string;
-  updatedAt?: string; // Compatibilidade com campo alternativo
+  image_url: string;
+  menu_category_id: string | null;
+  restaurant_id: string;
+  ingredients: string[] | null;
+  created_at: string;
+  updated_at: string;
 }
 
 const Products = () => {
@@ -58,30 +53,19 @@ const Products = () => {
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      // Consulta principal na tabela "Product"
-      const { data: productsData, error: productsError } = await supabase
-        .from("Product")
-        .select("*")
-        .order("createdAt", { ascending: false });
-
-      if (!productsError && productsData && productsData.length > 0) {
-        console.log("Consulta na tabela Product bem-sucedida:", productsData);
-        return productsData as Product[];
-      }
-
-      // Consulta na tabela "products" como fallback
-      const { data: fallbackData, error: fallbackError } = await supabase
+      // Consultar produtos
+      const { data, error } = await supabase
         .from("products")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (fallbackError) {
-        console.error("Erro ao consultar tabela products:", fallbackError);
+      if (error) {
+        console.error("Erro ao consultar produtos:", error);
         throw new Error("Não foi possível carregar os produtos");
       }
 
-      console.log("Consulta fallback bem-sucedida:", fallbackData);
-      return fallbackData as Product[];
+      console.log("Dados de produtos obtidos:", data);
+      return data as Product[];
     },
   });
 
@@ -89,26 +73,18 @@ const Products = () => {
   const { data: categories } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
-      // Consulta principal na tabela MenuCategory
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from("MenuCategory")
-        .select("*");
-
-      if (!categoriesError && categoriesData && categoriesData.length > 0) {
-        return categoriesData;
-      }
-
-      // Fallback para a tabela 'menu_categories'
-      const { data: menuCategoriesData, error: menuCategoriesError } = await supabase
+      // Consultar categorias
+      const { data, error } = await supabase
         .from("menu_categories")
         .select("*");
 
-      if (!menuCategoriesError && menuCategoriesData && menuCategoriesData.length > 0) {
-        return menuCategoriesData;
+      if (error) {
+        console.error("Erro ao consultar categorias:", error);
+        return [];
       }
 
-      console.error("Erro ao consultar categorias:", categoriesError || menuCategoriesError);
-      return []; // Retornamos array vazio para evitar erros
+      console.log("Categorias obtidas:", data);
+      return data || [];
     },
   });
 
@@ -121,7 +97,7 @@ const Products = () => {
     e.preventDefault();
     
     try {
-      // Preparando o objeto produto com os campos corretos
+      // Preparando o objeto produto
       const productPayload = {
         name: newProduct.name,
         description: newProduct.description,
@@ -132,7 +108,7 @@ const Products = () => {
         ingredients: [],
       };
 
-      // Tentamos inserir na tabela 'products'
+      // Inserir na tabela 'products'
       const { data, error } = await supabase
         .from("products")
         .insert([productPayload])
@@ -140,8 +116,7 @@ const Products = () => {
         .single();
 
       if (error) {
-        console.error("Erro ao inserir produto:", error);
-        throw new Error("Não foi possível adicionar o produto");
+        throw error;
       }
 
       toast({
@@ -169,9 +144,9 @@ const Products = () => {
     }
   };
 
-  // Função auxiliar para obter URL da imagem independente do formato do campo
+  // Função auxiliar para obter URL da imagem
   const getImageUrl = (product: Product): string => {
-    return product.image_url || product.imageUrl || "https://via.placeholder.com/150";
+    return product.image_url || "https://via.placeholder.com/150";
   };
 
   // Função auxiliar para obter o preço formatado
