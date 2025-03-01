@@ -105,7 +105,7 @@ const Products = () => {
 
       // Fallback para a tabela 'menu_categories'
       const { data: menuCategoriesData, error: menuCategoriesError } = await supabase
-        .from("menu_categories")
+        .from("MenuCategory")
         .select("*");
 
       if (!menuCategoriesError && menuCategoriesData && menuCategoriesData.length > 0) {
@@ -114,7 +114,7 @@ const Products = () => {
 
       // Segundo fallback para a tabela 'categorias'
       const { data: categoriasData, error: categoriasError } = await supabase
-        .from("categorias")
+        .from("MenuCategory")
         .select("*");
 
       if (categoriasError) {
@@ -141,11 +141,8 @@ const Products = () => {
         description: newProduct.description,
         price: parseFloat(newProduct.price),
         // Incluindo ambos os formatos de nomes de campos para compatibilidade
-        image_url: newProduct.image_url || "https://via.placeholder.com/150",
         imageUrl: newProduct.image_url || "https://via.placeholder.com/150",
-        menu_category_id: newProduct.category_id || null,
         menuCategoryId: newProduct.category_id || null,
-        restaurant_id: DEFAULT_RESTAURANT_ID,
         restaurantId: DEFAULT_RESTAURANT_ID,
         ingredients: [],
       };
@@ -162,7 +159,7 @@ const Products = () => {
         console.log("Erro ao inserir em 'Product', tentando 'products':", productError);
         
         const { data: productsData, error: productsError } = await supabase
-          .from("products")
+          .from("Product")
           .insert([productPayload])
           .select()
           .single();
