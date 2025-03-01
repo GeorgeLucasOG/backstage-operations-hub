@@ -136,7 +136,7 @@ const Products = () => {
     
     try {
       // Preparando o objeto produto com campos compatíveis para qualquer formato
-      const productData = {
+      const productPayload = {
         name: newProduct.name,
         description: newProduct.description,
         price: parseFloat(newProduct.price),
@@ -153,7 +153,7 @@ const Products = () => {
       // Tentamos inserir na tabela 'Product' primeiro
       const { data: productData, error: productError } = await supabase
         .from("Product")
-        .insert([productData])
+        .insert([productPayload])
         .select()
         .single();
 
@@ -163,7 +163,7 @@ const Products = () => {
         
         const { data: productsData, error: productsError } = await supabase
           .from("products")
-          .insert([productData])
+          .insert([productPayload])
           .select()
           .single();
 
