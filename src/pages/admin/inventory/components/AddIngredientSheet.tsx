@@ -10,62 +10,66 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-  SheetClose,
 } from "@/components/ui/sheet";
-import { Plus } from "lucide-react";
 import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Supplier } from "../types";
 
 interface AddIngredientSheetProps {
-  suppliers: Supplier[] | undefined;
+  suppliers?: Supplier[] | null;
   onSuccess: () => void;
 }
 
-export function AddIngredientSheet({ suppliers, onSuccess }: AddIngredientSheetProps) {
+export function AddIngredientSheet({ suppliers = [], onSuccess }: AddIngredientSheetProps) {
   const { toast } = useToast();
-  const [newIngredient, setNewIngredient] = useState({
+  const [formData, setFormData] = useState({
     name: "",
-    quantity: "",
-    min_quantity: "",
-    unit: "",
-    alert_threshold: "",
+    quantity: "0",
+    unit: "unidade",
+    min_quantity: "0",
+    alert_threshold: "0",
     supplier_id: "",
   });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   const handleAddIngredient = async () => {
     try {
       const { error } = await supabase.from("ingredients").insert({
-        name: newIngredient.name,
-        quantity: parseFloat(newIngredient.quantity),
-        min_quantity: parseFloat(newIngredient.min_quantity),
-        unit: newIngredient.unit,
-        alert_threshold: parseFloat(newIngredient.alert_threshold),
-        supplier_id: newIngredient.supplier_id || null,
-        restaurant_id: DEFAULT_RESTAURANT_ID,
+        name: formData.name,
+        quantity: parseFloat(formData.quantity),
+        unit: formData.unit,
+        min_quantity: parseFloat(formData.min_quantity),
+        alert_threshold: parseFloat(formData.alert_threshold),
+        supplier_id: formData.supplier_id || null,
+        restaurant_id: DEFAULT_RESTAURANT_ID
       });
 
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Ingrediente adicionado com sucesso!",
+        title: "Ingrediente adicionado",
+        description: "O ingrediente foi cadastrado com sucesso!",
       });
 
-      setNewIngredient({
+      setFormData({
         name: "",
-        quantity: "",
-        min_quantity: "",
-        unit: "",
-        alert_threshold: "",
+        quantity: "0",
+        unit: "unidade",
+        min_quantity: "0",
+        alert_threshold: "0",
         supplier_id: "",
       });
+
       onSuccess();
     } catch (error) {
       console.error("Erro ao adicionar ingrediente:", error);
       toast({
         title: "Erro",
-        description: "Erro ao adicionar ingrediente",
+        description: "Não foi possível adicionar o ingrediente.",
         variant: "destructive",
       });
     }
@@ -74,71 +78,107 @@ export function AddIngredientSheet({ suppliers, onSuccess }: AddIngredientSheetP
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Ingrediente
-        </Button>
+        <Button>Novo Ingrediente</Button>
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
           <SheetTitle>Adicionar Ingrediente</SheetTitle>
           <SheetDescription>
-            Cadastre um novo ingrediente no estoque
+            Adicione um novo ingrediente ao seu estoque
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-4 py-4">
-          <Input
-            placeholder="Nome"
-            value={newIngredient.name}
-            onChange={(e) => setNewIngredient(prev => ({ ...prev, name: e.target.value }))}
-          />
-          <Input
-            type="number"
-            placeholder="Quantidade"
-            value={newIngredient.quantity}
-            onChange={(e) => setNewIngredient(prev => ({ ...prev, quantity: e.target.value }))}
-          />
-          <Input
-            type="number"
-            placeholder="Quantidade Mínima"
-            value={newIngredient.min_quantity}
-            onChange={(e) => setNewIngredient(prev => ({ ...prev, min_quantity: e.target.value }))}
-          />
-          <Input
-            type="number"
-            placeholder="Alerta de Estoque Baixo"
-            value={newIngredient.alert_threshold}
-            onChange={(e) => setNewIngredient(prev => ({ ...prev, alert_threshold: e.target.value }))}
-          />
-          <select
-            className="w-full p-2 border rounded"
-            value={newIngredient.unit}
-            onChange={(e) => setNewIngredient(prev => ({ ...prev, unit: e.target.value }))}
-          >
-            <option value="">Selecione a Unidade</option>
-            <option value="L">Litros</option>
-            <option value="KG">Kilogramas</option>
-            <option value="UN">Unidades</option>
-            <option value="G">Gramas</option>
-            <option value="ML">Mililitros</option>
-          </select>
-          <select
-            className="w-full p-2 border rounded"
-            value={newIngredient.supplier_id}
-            onChange={(e) => setNewIngredient(prev => ({ ...prev, supplier_id: e.target.value }))}
-          >
-            <option value="">Selecione o Fornecedor</option>
-            {suppliers?.map(supplier => (
-              <option key={supplier.id} value={supplier.id}>
-                {supplier.name}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-2">
+            <label htmlFor="name" className="text-sm font-medium">Nome</label>
+            <Input
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="quantity" className="text-sm font-medium">Quantidade</label>
+              <Input
+                id="quantity"
+                name="quantity"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.quantity}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="unit" className="text-sm font-medium">Unidade</label>
+              <select
+                id="unit"
+                name="unit"
+                className="w-full p-2 border rounded"
+                value={formData.unit}
+                onChange={handleChange}
+              >
+                <option value="unidade">Unidade</option>
+                <option value="kg">Kilogramas (kg)</option>
+                <option value="g">Gramas (g)</option>
+                <option value="l">Litros (l)</option>
+                <option value="ml">Mililitros (ml)</option>
+                <option value="caixa">Caixa</option>
+                <option value="pacote">Pacote</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="min_quantity" className="text-sm font-medium">Mínimo</label>
+              <Input
+                id="min_quantity"
+                name="min_quantity"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.min_quantity}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="alert_threshold" className="text-sm font-medium">Alerta</label>
+              <Input
+                id="alert_threshold"
+                name="alert_threshold"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.alert_threshold}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="supplier_id" className="text-sm font-medium">Fornecedor</label>
+            <select
+              id="supplier_id"
+              name="supplier_id"
+              className="w-full p-2 border rounded"
+              value={formData.supplier_id}
+              onChange={handleChange}
+            >
+              <option value="">Selecione um fornecedor (opcional)</option>
+              {suppliers?.map((supplier) => (
+                <option key={supplier.id} value={supplier.id}>
+                  {supplier.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <SheetFooter>
-          <SheetClose asChild>
-            <Button onClick={handleAddIngredient}>Adicionar Ingrediente</Button>
-          </SheetClose>
+          <Button onClick={handleAddIngredient}>Adicionar Ingrediente</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

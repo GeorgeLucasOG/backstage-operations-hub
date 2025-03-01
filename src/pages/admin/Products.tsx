@@ -58,31 +58,26 @@ const Products = () => {
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      // Consulta direta na tabela Product usando o nome correto da tabela
+      // Consulta principal na tabela "Product"
       const { data: productsData, error: productsError } = await supabase
         .from("Product")
         .select("*")
         .order("createdAt", { ascending: false });
 
-      if (productsError) {
-        console.error("Erro ao consultar tabela Product:", productsError);
-        throw new Error("Não foi possível carregar os produtos");
-      }
-
-      if (productsData && productsData.length > 0) {
+      if (!productsError && productsData && productsData.length > 0) {
         console.log("Consulta na tabela Product bem-sucedida:", productsData);
         return productsData as Product[];
       }
 
-      // Fallback para a tabela 'products' se não encontrar na 'Product'
+      // Consulta na tabela "products" como fallback
       const { data: fallbackData, error: fallbackError } = await supabase
         .from("products")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (fallbackError) {
-        console.error("Erro ao consultar tabela fallback:", fallbackError);
-        return [];
+        console.error("Erro ao consultar tabela products:", fallbackError);
+        throw new Error("Não foi possível carregar os produtos");
       }
 
       console.log("Consulta fallback bem-sucedida:", fallbackData);
@@ -105,24 +100,15 @@ const Products = () => {
 
       // Fallback para a tabela 'menu_categories'
       const { data: menuCategoriesData, error: menuCategoriesError } = await supabase
-        .from("MenuCategory")
+        .from("menu_categories")
         .select("*");
 
       if (!menuCategoriesError && menuCategoriesData && menuCategoriesData.length > 0) {
         return menuCategoriesData;
       }
 
-      // Segundo fallback para a tabela 'categorias'
-      const { data: categoriasData, error: categoriasError } = await supabase
-        .from("MenuCategory")
-        .select("*");
-
-      if (categoriasError) {
-        console.error("Erro ao consultar categorias:", categoriasError);
-        return []; // Retornamos array vazio para evitar erros
-      }
-
-      return categoriasData || [];
+      console.error("Erro ao consultar categorias:", categoriesError || menuCategoriesError);
+      return []; // Retornamos array vazio para evitar erros
     },
   });
 
@@ -135,38 +121,27 @@ const Products = () => {
     e.preventDefault();
     
     try {
-      // Preparando o objeto produto com campos compatíveis para qualquer formato
+      // Preparando o objeto produto com os campos corretos
       const productPayload = {
         name: newProduct.name,
         description: newProduct.description,
         price: parseFloat(newProduct.price),
-        // Incluindo ambos os formatos de nomes de campos para compatibilidade
-        imageUrl: newProduct.image_url || "https://via.placeholder.com/150",
-        menuCategoryId: newProduct.category_id || null,
-        restaurantId: DEFAULT_RESTAURANT_ID,
+        image_url: newProduct.image_url || "https://via.placeholder.com/150",
+        menu_category_id: newProduct.category_id || null,
+        restaurant_id: DEFAULT_RESTAURANT_ID,
         ingredients: [],
       };
 
-      // Tentamos inserir na tabela 'Product' primeiro
-      const { data: productData, error: productError } = await supabase
-        .from("Product")
+      // Tentamos inserir na tabela 'products'
+      const { data, error } = await supabase
+        .from("products")
         .insert([productPayload])
         .select()
         .single();
 
-      // Se houver erro na primeira tentativa, tentamos com a tabela 'products'
-      if (productError) {
-        console.log("Erro ao inserir em 'Product', tentando 'products':", productError);
-        
-        const { data: productsData, error: productsError } = await supabase
-          .from("Product")
-          .insert([productPayload])
-          .select()
-          .single();
-
-        if (productsError) {
-          throw new Error("Não foi possível adicionar o produto");
-        }
+      if (error) {
+        console.error("Erro ao inserir produto:", error);
+        throw new Error("Não foi possível adicionar o produto");
       }
 
       toast({

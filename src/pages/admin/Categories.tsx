@@ -105,11 +105,11 @@ const Categories = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("menu_categories")
-        .select("*, restaurants(name)")
+        .select("*, Restaurant(name)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as (Category & { restaurants: { name: string } })[];
+      return data as (Category & { Restaurant: { name: string } })[];
     },
   });
 
@@ -117,7 +117,7 @@ const Categories = () => {
     queryKey: ["restaurants"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("restaurants")
+        .from("Restaurant")
         .select("id, name")
         .order("name");
 
@@ -256,7 +256,7 @@ const Categories = () => {
               {categories?.map((category) => (
                 <TableRow key={category.id}>
                   <TableCell>{category.name}</TableCell>
-                  <TableCell>{category.restaurants.name}</TableCell>
+                  <TableCell>{category.Restaurant.name}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Sheet>

@@ -33,7 +33,7 @@ interface Order {
   consumption_method: "TAKEAWAY" | "DINE_IN";
   restaurant_id: string;
   created_at: string;
-  restaurants: {
+  Restaurant: {
     name: string;
   };
 }
@@ -193,7 +193,7 @@ const Orders = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("*, restaurants(name)")
+        .select("*, Restaurant(name)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -205,7 +205,7 @@ const Orders = () => {
     queryKey: ["restaurants"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("restaurants")
+        .from("Restaurant")
         .select("id, name")
         .order("name");
 
@@ -365,7 +365,7 @@ const Orders = () => {
                 <TableRow key={order.id}>
                   <TableCell>{order.id}</TableCell>
                   <TableCell>{order.customer_name}</TableCell>
-                  <TableCell>{order.restaurants.name}</TableCell>
+                  <TableCell>{order.Restaurant?.name}</TableCell>
                   <TableCell>R$ {order.total.toFixed(2)}</TableCell>
                   <TableCell>{formatConsumptionMethod(order.consumption_method)}</TableCell>
                   <TableCell>{order.table_number || "-"}</TableCell>
