@@ -19,12 +19,13 @@ import AccountsReceivable from "./pages/admin/AccountsReceivable";
 import Cash from "./pages/admin/Cash";
 import NotFound from "./pages/NotFound";
 
-// Create a client
+// Create a client with error handling configurado para compatibilidade com aplicativos cliente
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: false,
+      staleTime: 5 * 60 * 1000, // 5 minutos de cache para melhor desempenho
     },
   },
 });
