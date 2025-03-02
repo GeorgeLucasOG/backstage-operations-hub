@@ -30,12 +30,12 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  image_url: string;
-  menu_category_id: string | null;
-  restaurant_id: string;
+  imageUrl: string; // Changing to match the actual column name in database
+  menuCategoryId: string | null; // Changing to match the actual column name
+  restaurantId: string; // Changing to match the actual column name
   ingredients: string[] | null;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const Products = () => {
@@ -55,9 +55,9 @@ const Products = () => {
     queryFn: async () => {
       // Consultar produtos
       const { data, error } = await supabase
-        .from("products")
+        .from("Product") // Corrigindo o nome da tabela para "Product" (com P maiúsculo)
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("createdAt", { ascending: false });
 
       if (error) {
         console.error("Erro ao consultar produtos:", error);
@@ -75,7 +75,7 @@ const Products = () => {
     queryFn: async () => {
       // Consultar categorias
       const { data, error } = await supabase
-        .from("menu_categories")
+        .from("MenuCategory") // Corrigindo para o nome correto da tabela
         .select("*");
 
       if (error) {
@@ -97,23 +97,29 @@ const Products = () => {
     e.preventDefault();
     
     try {
+      // Gerando um ID único para o novo produto
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      
       // Preparando o objeto produto
       const productPayload = {
+        id,
         name: newProduct.name,
         description: newProduct.description,
         price: parseFloat(newProduct.price),
-        image_url: newProduct.image_url || "https://via.placeholder.com/150",
-        menu_category_id: newProduct.category_id || null,
-        restaurant_id: DEFAULT_RESTAURANT_ID,
+        imageUrl: newProduct.image_url || "https://via.placeholder.com/150", // Corrigindo para o nome da coluna no banco
+        menuCategoryId: newProduct.category_id || null, // Corrigindo para o nome da coluna no banco
+        restaurantId: DEFAULT_RESTAURANT_ID, // Corrigindo para o nome da coluna no banco
         ingredients: [],
+        createdAt: now,
+        updatedAt: now
       };
 
-      // Inserir na tabela 'products'
+      // Inserir na tabela 'Product'
       const { data, error } = await supabase
-        .from("products")
+        .from("Product") // Corrigindo o nome da tabela para "Product" (com P maiúsculo)
         .insert([productPayload])
-        .select()
-        .single();
+        .select();
 
       if (error) {
         throw error;
@@ -146,7 +152,7 @@ const Products = () => {
 
   // Função auxiliar para obter URL da imagem
   const getImageUrl = (product: Product): string => {
-    return product.image_url || "https://via.placeholder.com/150";
+    return product.imageUrl || "https://via.placeholder.com/150"; // Atualizado para o nome correto da propriedade
   };
 
   // Função auxiliar para obter o preço formatado
