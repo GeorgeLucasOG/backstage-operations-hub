@@ -46,6 +46,16 @@ interface CategoryFormData {
   restaurantId: string;
 }
 
+// Função para gerar UUID v4
+function generateUUID() {
+  // Implementação simples de UUID v4
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 const CategoryForm = ({
   onSubmit,
   initialData = null,
@@ -172,22 +182,29 @@ const Categories = () => {
 
   const createMutation = useMutation({
     mutationFn: async (newCategory: CategoryFormData) => {
-      const now = new Date().toISOString();
-      const completeCategory = {
-        ...newCategory,
-        id: crypto.randomUUID(),
-        createdAt: now,
-        updatedAt: now,
-      };
+      try {
+        console.log("Criando nova categoria:", newCategory);
+        const now = new Date().toISOString();
+        const completeCategory = {
+          ...newCategory,
+          id: generateUUID(),
+          createdAt: now,
+          updatedAt: now,
+        };
 
-      const { data, error } = await supabase
-        .from("MenuCategory")
-        .insert([completeCategory])
-        .select()
-        .single();
+        const { data, error } = await supabase
+          .from("MenuCategory")
+          .insert([completeCategory])
+          .select()
+          .single();
 
-      if (error) throw error;
-      return data;
+        if (error) throw error;
+        console.log("Categoria criada com sucesso:", data);
+        return data;
+      } catch (error) {
+        console.error("Erro durante a criação da categoria:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
@@ -200,7 +217,10 @@ const Categories = () => {
       console.error("Erro ao criar categoria:", error);
       toast({
         title: "Erro",
-        description: "Erro ao criar categoria: " + error.message,
+        description:
+          error instanceof Error
+            ? `Erro ao criar categoria: ${error.message}`
+            : "Erro desconhecido ao criar categoria",
         variant: "destructive",
       });
     },
@@ -211,15 +231,22 @@ const Categories = () => {
       id,
       ...updateData
     }: CategoryFormData & { id: string }) => {
-      const { data, error } = await supabase
-        .from("MenuCategory")
-        .update(updateData)
-        .eq("id", id)
-        .select()
-        .single();
+      try {
+        console.log("Atualizando categoria:", id, updateData);
+        const { data, error } = await supabase
+          .from("MenuCategory")
+          .update(updateData)
+          .eq("id", id)
+          .select()
+          .single();
 
-      if (error) throw error;
-      return data;
+        if (error) throw error;
+        console.log("Categoria atualizada com sucesso:", data);
+        return data;
+      } catch (error) {
+        console.error("Erro durante a atualização da categoria:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
@@ -233,7 +260,10 @@ const Categories = () => {
       console.error("Erro ao atualizar categoria:", error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar categoria: " + error.message,
+        description:
+          error instanceof Error
+            ? `Erro ao atualizar categoria: ${error.message}`
+            : "Erro desconhecido ao atualizar categoria",
         variant: "destructive",
       });
     },
@@ -241,12 +271,19 @@ const Categories = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("MenuCategory")
-        .delete()
-        .eq("id", id);
+      try {
+        console.log("Excluindo categoria:", id);
+        const { error } = await supabase
+          .from("MenuCategory")
+          .delete()
+          .eq("id", id);
 
-      if (error) throw error;
+        if (error) throw error;
+        console.log("Categoria excluída com sucesso");
+      } catch (error) {
+        console.error("Erro durante a exclusão da categoria:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
@@ -259,7 +296,10 @@ const Categories = () => {
       console.error("Erro ao excluir categoria:", error);
       toast({
         title: "Erro",
-        description: "Erro ao excluir categoria: " + error.message,
+        description:
+          error instanceof Error
+            ? `Erro ao excluir categoria: ${error.message}`
+            : "Erro desconhecido ao excluir categoria",
         variant: "destructive",
       });
     },
@@ -292,6 +332,11 @@ const Categories = () => {
                   onSubmit={(data) => createMutation.mutate(data)}
                   restaurants={restaurants}
                 />
+              )}
+              {createMutation.isPending && (
+                <div className="mt-4 text-center text-gray-600">
+                  <p>Criando categoria...</p>
+                </div>
               )}
             </div>
           </SheetContent>
@@ -330,11 +375,6 @@ const Categories = () => {
                   <TableCell>{category.name}</TableCell>
                   <TableCell>
                     {category.Restaurant?.name || "Sem restaurante"}
-                    {/*!category.Restaurant?.name && (
-                      <span className="text-xs text-red-500 block">
-                        (ID: {category.restaurantId || "não definido"})
-                      </span>
-                    )*/}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
