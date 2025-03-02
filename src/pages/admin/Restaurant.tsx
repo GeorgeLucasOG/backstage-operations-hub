@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +11,13 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -35,7 +40,23 @@ interface RestaurantFormData {
   coverImageUrl: string;
 }
 
-const RestaurantForm = ({ onSubmit, initialData = null }: { onSubmit: (data: RestaurantFormData) => void, initialData?: Restaurant | null }) => {
+// Função para gerar UUID compatível
+function generateUUID() {
+  let dt = new Date().getTime();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (dt + Math.random() * 16) % 16 | 0;
+    dt = Math.floor(dt / 16);
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+const RestaurantForm = ({
+  onSubmit,
+  initialData = null,
+}: {
+  onSubmit: (data: RestaurantFormData) => void;
+  initialData?: Restaurant | null;
+}) => {
   const [formData, setFormData] = useState<RestaurantFormData>(
     initialData || {
       name: "",
@@ -54,7 +75,9 @@ const RestaurantForm = ({ onSubmit, initialData = null }: { onSubmit: (data: Res
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium mb-1">Nome</label>
+        <label htmlFor="name" className="block text-sm font-medium mb-1">
+          Nome
+        </label>
         <Input
           id="name"
           value={formData.name}
@@ -63,38 +86,63 @@ const RestaurantForm = ({ onSubmit, initialData = null }: { onSubmit: (data: Res
         />
       </div>
       <div>
-        <label htmlFor="description" className="block text-sm font-medium mb-1">Descrição</label>
+        <label htmlFor="description" className="block text-sm font-medium mb-1">
+          Descrição
+        </label>
         <Input
           id="description"
           value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, description: e.target.value })
+          }
           required
         />
       </div>
       <div>
-        <label htmlFor="slug" className="block text-sm font-medium mb-1">Slug</label>
+        <label htmlFor="slug" className="block text-sm font-medium mb-1">
+          Slug
+        </label>
         <Input
           id="slug"
           value={formData.slug}
-          onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") })}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              slug: e.target.value.toLowerCase().replace(/\s+/g, "-"),
+            })
+          }
           required
         />
       </div>
       <div>
-        <label htmlFor="avatarImageUrl" className="block text-sm font-medium mb-1">URL do Avatar</label>
+        <label
+          htmlFor="avatarImageUrl"
+          className="block text-sm font-medium mb-1"
+        >
+          URL do Avatar
+        </label>
         <Input
           id="avatarImageUrl"
           value={formData.avatarImageUrl}
-          onChange={(e) => setFormData({ ...formData, avatarImageUrl: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, avatarImageUrl: e.target.value })
+          }
           required
         />
       </div>
       <div>
-        <label htmlFor="coverImageUrl" className="block text-sm font-medium mb-1">URL da Capa</label>
+        <label
+          htmlFor="coverImageUrl"
+          className="block text-sm font-medium mb-1"
+        >
+          URL da Capa
+        </label>
         <Input
           id="coverImageUrl"
           value={formData.coverImageUrl}
-          onChange={(e) => setFormData({ ...formData, coverImageUrl: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, coverImageUrl: e.target.value })
+          }
           required
         />
       </div>
@@ -108,14 +156,20 @@ const RestaurantForm = ({ onSubmit, initialData = null }: { onSubmit: (data: Res
 const Restaurant = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
+  const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(
+    null
+  );
 
-  const { data: restaurants, isLoading, error } = useQuery({
+  const {
+    data: restaurants,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["restaurants"],
     queryFn: async () => {
       console.log("Iniciando busca de restaurantes...");
       const { data, error } = await supabase
-        .from("Restaurant") 
+        .from("Restaurant")
         .select("*")
         .order("createdAt", { ascending: false });
 
@@ -137,26 +191,28 @@ const Restaurant = () => {
   const createMutation = useMutation({
     mutationFn: async (newRestaurant: RestaurantFormData) => {
       console.log("Iniciando criação do restaurante:", newRestaurant);
-      
-      // Gerando um ID único para o novo restaurante
-      const id = crypto.randomUUID();
+
+      // Gerando um ID único para o novo restaurante usando nossa função personalizada
+      const id = generateUUID();
       const now = new Date().toISOString();
-      
+
       const { data, error } = await supabase
         .from("Restaurant")
-        .insert([{
-          id,
-          ...newRestaurant,
-          createdAt: now,
-          updatedAt: now
-        }])
+        .insert([
+          {
+            id,
+            ...newRestaurant,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ])
         .select();
 
       if (error) {
         console.error("Erro ao criar restaurante:", error);
         throw error;
       }
-      
+
       console.log("Restaurante criado com sucesso:", data);
       return data[0];
     },
@@ -178,14 +234,17 @@ const Restaurant = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, ...updateData }: RestaurantFormData & { id: string }) => {
+    mutationFn: async ({
+      id,
+      ...updateData
+    }: RestaurantFormData & { id: string }) => {
       console.log("Iniciando atualização do restaurante:", id, updateData);
-      
+
       const { data, error } = await supabase
-        .from("Restaurant") 
+        .from("Restaurant")
         .update({
           ...updateData,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         })
         .eq("id", id)
         .select();
@@ -194,7 +253,7 @@ const Restaurant = () => {
         console.error("Erro ao atualizar restaurante:", error);
         throw error;
       }
-      
+
       console.log("Restaurante atualizado com sucesso:", data);
       return data[0];
     },
@@ -219,17 +278,14 @@ const Restaurant = () => {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       console.log("Iniciando exclusão do restaurante:", id);
-      
-      const { error } = await supabase
-        .from("Restaurant") 
-        .delete()
-        .eq("id", id);
+
+      const { error } = await supabase.from("Restaurant").delete().eq("id", id);
 
       if (error) {
         console.error("Erro ao excluir restaurante:", error);
         throw error;
       }
-      
+
       console.log("Restaurante excluído com sucesso");
     },
     onSuccess: () => {
@@ -271,7 +327,9 @@ const Restaurant = () => {
               <SheetTitle>Novo Restaurante</SheetTitle>
             </SheetHeader>
             <div className="mt-4">
-              <RestaurantForm onSubmit={(data) => createMutation.mutate(data)} />
+              <RestaurantForm
+                onSubmit={(data) => createMutation.mutate(data)}
+              />
             </div>
           </SheetContent>
         </Sheet>
@@ -327,7 +385,10 @@ const Restaurant = () => {
                               <RestaurantForm
                                 initialData={restaurant}
                                 onSubmit={(data) =>
-                                  updateMutation.mutate({ ...data, id: restaurant.id })
+                                  updateMutation.mutate({
+                                    ...data,
+                                    id: restaurant.id,
+                                  })
                                 }
                               />
                             </div>
@@ -347,7 +408,8 @@ const Restaurant = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-4">
-                    Nenhum restaurante encontrado. Clique em "Adicionar Restaurante" para criar um.
+                    Nenhum restaurante encontrado. Clique em "Adicionar
+                    Restaurante" para criar um.
                   </TableCell>
                 </TableRow>
               )}
