@@ -14,7 +14,7 @@ const Inventory = () => {
     queryKey: ["ingredients"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ingredients")
+        .from("Ingredients")
         .select("*")
         .order("name");
       
@@ -27,7 +27,7 @@ const Inventory = () => {
     queryKey: ["suppliers"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("suppliers")
+        .from("Suppliers")
         .select("*")
         .order("name");
       
@@ -40,7 +40,7 @@ const Inventory = () => {
     queryKey: ["stock-movements"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("stock_movements")
+        .from("StockMovements")
         .select("*")
         .order("createdAt", { ascending: false });
       

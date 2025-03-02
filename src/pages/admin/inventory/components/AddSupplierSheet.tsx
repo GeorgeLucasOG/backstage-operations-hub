@@ -18,7 +18,7 @@ export function AddSupplierSheet({ onSuccess }: { onSuccess: () => void }) {
   const { toast } = useToast();
   const [supplierData, setSupplierData] = useState({
     name: "",
-    company_name: "",
+    companyName: "",
     email: "",
     phone: "",
     cnpj: "",
@@ -32,9 +32,9 @@ export function AddSupplierSheet({ onSuccess }: { onSuccess: () => void }) {
 
   const handleSubmit = async () => {
     try {
-      const { error } = await supabase.from("suppliers").insert({
+      const { error } = await supabase.from("Suppliers").insert({
         name: supplierData.name,
-        company_name: supplierData.company_name || null,
+        companyName: supplierData.companyName || null,
         email: supplierData.email || null,
         phone: supplierData.phone || null,
         cnpj: supplierData.cnpj || null,
@@ -51,7 +51,7 @@ export function AddSupplierSheet({ onSuccess }: { onSuccess: () => void }) {
 
       setSupplierData({
         name: "",
-        company_name: "",
+        companyName: "",
         email: "",
         phone: "",
         cnpj: "",
@@ -93,11 +93,11 @@ export function AddSupplierSheet({ onSuccess }: { onSuccess: () => void }) {
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="company_name">Nome da Empresa</label>
+            <label htmlFor="companyName">Nome da Empresa</label>
             <Input 
-              id="company_name"
-              name="company_name"
-              value={supplierData.company_name}
+              id="companyName"
+              name="companyName"
+              value={supplierData.companyName}
               onChange={handleChange}
             />
           </div>

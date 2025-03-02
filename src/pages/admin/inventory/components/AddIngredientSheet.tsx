@@ -21,17 +21,17 @@ export function AddIngredientSheet({ onSuccess }: { onSuccess: () => void }) {
   const [ingredientData, setIngredientData] = useState({
     name: "",
     quantity: "",
-    min_quantity: "",
-    alert_threshold: "",
+    minQuantity: "",
+    alertThreshold: "",
     unit: "",
-    supplier_id: "",
+    supplierId: "",
   });
 
   const { data: suppliers } = useQuery({
     queryKey: ["suppliers"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("suppliers")
+        .from("Suppliers")
         .select("*");
       
       if (error) throw error;
@@ -46,13 +46,13 @@ export function AddIngredientSheet({ onSuccess }: { onSuccess: () => void }) {
 
   const handleSubmit = async () => {
     try {
-      const { error } = await supabase.from("ingredients").insert({
+      const { error } = await supabase.from("Ingredients").insert({
         name: ingredientData.name,
         quantity: parseFloat(ingredientData.quantity) || 0,
-        min_quantity: parseFloat(ingredientData.min_quantity) || 0,
-        alert_threshold: parseFloat(ingredientData.alert_threshold) || 0,
+        minQuantity: parseFloat(ingredientData.minQuantity) || 0,
+        alertThreshold: parseFloat(ingredientData.alertThreshold) || 0,
         unit: ingredientData.unit,
-        supplier_id: ingredientData.supplier_id || null,
+        supplierId: ingredientData.supplierId || null,
         restaurantId: DEFAULT_RESTAURANT_ID,
       });
 
@@ -66,10 +66,10 @@ export function AddIngredientSheet({ onSuccess }: { onSuccess: () => void }) {
       setIngredientData({
         name: "",
         quantity: "",
-        min_quantity: "",
-        alert_threshold: "",
+        minQuantity: "",
+        alertThreshold: "",
         unit: "",
-        supplier_id: "",
+        supplierId: "",
       });
 
       onSuccess();
@@ -118,23 +118,23 @@ export function AddIngredientSheet({ onSuccess }: { onSuccess: () => void }) {
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="min_quantity">Quantidade Mínima</label>
+            <label htmlFor="minQuantity">Quantidade Mínima</label>
             <Input 
-              id="min_quantity"
-              name="min_quantity"
+              id="minQuantity"
+              name="minQuantity"
               type="number"
-              value={ingredientData.min_quantity}
+              value={ingredientData.minQuantity}
               onChange={handleChange}
               required
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="alert_threshold">Limite para Alerta</label>
+            <label htmlFor="alertThreshold">Limite para Alerta</label>
             <Input 
-              id="alert_threshold"
-              name="alert_threshold"
+              id="alertThreshold"
+              name="alertThreshold"
               type="number"
-              value={ingredientData.alert_threshold}
+              value={ingredientData.alertThreshold}
               onChange={handleChange}
             />
           </div>
@@ -150,12 +150,12 @@ export function AddIngredientSheet({ onSuccess }: { onSuccess: () => void }) {
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="supplier_id">Fornecedor</label>
+            <label htmlFor="supplierId">Fornecedor</label>
             <select
-              id="supplier_id"
-              name="supplier_id"
+              id="supplierId"
+              name="supplierId"
               className="w-full p-2 border rounded"
-              value={ingredientData.supplier_id}
+              value={ingredientData.supplierId}
               onChange={handleChange}
             >
               <option value="">Selecione um fornecedor</option>

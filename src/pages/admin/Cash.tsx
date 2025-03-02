@@ -18,32 +18,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { format } from "date-fns";
-
-type CashRegister = {
-  id: string;
-  name: string;
-  initial_amount: number;
-  current_amount: number;
-  opened_at: string | null;
-  closed_at: string | null;
-  status: "OPEN" | "CLOSED";
-  restaurantId: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-type CashMovement = {
-  id: string;
-  cash_register_id: string;
-  amount: number;
-  type: "IN" | "OUT";
-  description: string;
-  payment_method: string;
-  createdAt: string;
-  orderId?: number;
-  restaurantId: string;
-  updatedAt?: string;
-};
+import { CashRegister, CashMovement } from "./inventory/types";
 
 const Cash = () => {
   const { toast } = useToast();
@@ -59,7 +34,7 @@ const Cash = () => {
     queryKey: ["cash-registers"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("cash_registers")
+        .from("CashRegisters")
         .select("*")
         .order("createdAt", { ascending: false });
 
@@ -76,7 +51,7 @@ const Cash = () => {
       today.setHours(0, 0, 0, 0);
 
       const { data, error } = await supabase
-        .from("cash_movements")
+        .from("CashMovements")
         .select("*")
         .gte("createdAt", today.toISOString())
         .order("createdAt", { ascending: false });
@@ -92,11 +67,11 @@ const Cash = () => {
 
   const handleOpenCash = async () => {
     try {
-      const { error } = await supabase.from("cash_registers").insert({
+      const { error } = await supabase.from("CashRegisters").insert({
         name: cashName,
-        initial_amount: parseFloat(initialAmount),
-        current_amount: parseFloat(initialAmount),
-        opened_at: new Date().toISOString(),
+        initialAmount: parseFloat(initialAmount),
+        currentAmount: parseFloat(initialAmount),
+        openedAt: new Date().toISOString(),
         status: "OPEN",
         restaurantId: DEFAULT_RESTAURANT_ID
       });
@@ -127,10 +102,10 @@ const Cash = () => {
 
     try {
       const { error } = await supabase
-        .from("cash_registers")
+        .from("CashRegisters")
         .update({
           status: "CLOSED",
-          closed_at: new Date().toISOString()
+          closedAt: new Date().toISOString()
         })
         .eq("id", currentRegister.id);
 
@@ -165,7 +140,7 @@ const Cash = () => {
 
     try {
       const movementAmount = parseFloat(amount);
-      let newAmount = currentRegister.current_amount;
+      let newAmount = currentRegister.currentAmount;
 
       if (type === "IN") {
         newAmount += movementAmount;
@@ -177,12 +152,12 @@ const Cash = () => {
       }
 
       // Registrar movimento
-      const { error: movementError } = await supabase.from("cash_movements").insert({
-        cash_register_id: currentRegister.id,
+      const { error: movementError } = await supabase.from("CashMovements").insert({
+        cashRegisterId: currentRegister.id,
         amount: movementAmount,
         type,
         description,
-        payment_method: paymentMethod,
+        paymentMethod,
         restaurantId: DEFAULT_RESTAURANT_ID
       });
 
@@ -190,8 +165,8 @@ const Cash = () => {
 
       // Atualizar saldo do caixa
       const { error: updateError } = await supabase
-        .from("cash_registers")
-        .update({ current_amount: newAmount })
+        .from("CashRegisters")
+        .update({ currentAmount: newAmount })
         .eq("id", currentRegister.id);
 
       if (updateError) throw updateError;
@@ -252,10 +227,10 @@ const Cash = () => {
               <div>
                 <h2 className="text-lg font-semibold">{currentRegister.name}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Aberto em: {format(new Date(currentRegister.opened_at!), "dd/MM/yyyy HH:mm")}
+                  Aberto em: {format(new Date(currentRegister.openedAt!), "dd/MM/yyyy HH:mm")}
                 </p>
                 <p className="text-sm font-medium">
-                  Saldo atual: R$ {currentRegister.current_amount.toFixed(2)}
+                  Saldo atual: R$ {currentRegister.currentAmount.toFixed(2)}
                 </p>
               </div>
               <Button variant="destructive" onClick={handleCloseCash}>
@@ -371,7 +346,7 @@ const Cash = () => {
                     </TableCell>
                     <TableCell>{movement.type === "IN" ? "Entrada" : "Saída"}</TableCell>
                     <TableCell>{movement.description}</TableCell>
-                    <TableCell>{movement.payment_method}</TableCell>
+                    <TableCell>{movement.paymentMethod}</TableCell>
                     <TableCell className={movement.type === "IN" ? "text-green-600" : "text-red-600"}>
                       R$ {movement.amount.toFixed(2)}
                     </TableCell>
@@ -401,13 +376,13 @@ const Cash = () => {
               {registers.map((register) => (
                 <TableRow key={register.id}>
                   <TableCell>{register.name}</TableCell>
-                  <TableCell>R$ {register.initial_amount.toFixed(2)}</TableCell>
-                  <TableCell>R$ {register.current_amount.toFixed(2)}</TableCell>
+                  <TableCell>R$ {register.initialAmount.toFixed(2)}</TableCell>
+                  <TableCell>R$ {register.currentAmount.toFixed(2)}</TableCell>
                   <TableCell>
-                    {register.opened_at ? format(new Date(register.opened_at), "dd/MM/yyyy HH:mm") : "-"}
+                    {register.openedAt ? format(new Date(register.openedAt), "dd/MM/yyyy HH:mm") : "-"}
                   </TableCell>
                   <TableCell>
-                    {register.closed_at ? format(new Date(register.closed_at), "dd/MM/yyyy HH:mm") : "-"}
+                    {register.closedAt ? format(new Date(register.closedAt), "dd/MM/yyyy HH:mm") : "-"}
                   </TableCell>
                   <TableCell>{register.status === "OPEN" ? "Aberto" : "Fechado"}</TableCell>
                 </TableRow>

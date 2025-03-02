@@ -7,20 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-
-type AccountReceivable = {
-  id: string;
-  description: string;
-  pix_key: string | null;
-  boleto_code: string | null;
-  createdAt: string;
-  due_date: string;
-  received_date: string | null;
-  restaurantId: string;
-  amount: number;
-  status: string;
-  updatedAt: string | null;
-};
+import { AccountReceivable } from "./inventory/types";
 
 const AccountsReceivable = () => {
   const { toast } = useToast();
@@ -34,7 +21,7 @@ const AccountsReceivable = () => {
     queryKey: ["accounts-receivable"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("accounts_receivable")
+        .from("AccountsReceivable")
         .select("*")
         .order("createdAt", { ascending: false });
 
@@ -47,11 +34,11 @@ const AccountsReceivable = () => {
     e.preventDefault();
 
     try {
-      const { error } = await supabase.from("accounts_receivable").insert({
+      const { error } = await supabase.from("AccountsReceivable").insert({
         description,
-        pix_key: pixKey || null,
-        boleto_code: boletoCode || null,
-        due_date: dueDate,
+        pixKey: pixKey || null,
+        boletoCode: boletoCode || null,
+        dueDate: dueDate,
         amount: parseFloat(amount),
         restaurantId: DEFAULT_RESTAURANT_ID,
         status: "PENDING"
@@ -141,10 +128,10 @@ const AccountsReceivable = () => {
             {accounts?.map((account) => (
               <TableRow key={account.id}>
                 <TableCell>{account.description}</TableCell>
-                <TableCell>{account.pix_key}</TableCell>
-                <TableCell>{account.boleto_code}</TableCell>
+                <TableCell>{account.pixKey}</TableCell>
+                <TableCell>{account.boletoCode}</TableCell>
                 <TableCell>{new Date(account.createdAt).toLocaleDateString()}</TableCell>
-                <TableCell>{new Date(account.due_date).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(account.dueDate).toLocaleDateString()}</TableCell>
                 <TableCell>R$ {account.amount.toFixed(2)}</TableCell>
                 <TableCell>{account.status}</TableCell>
               </TableRow>
