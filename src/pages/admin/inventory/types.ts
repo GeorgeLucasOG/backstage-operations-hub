@@ -3,31 +3,89 @@ export interface Ingredient {
   id: string;
   name: string;
   quantity: number;
-  min_quantity: number;
+  minQuantity: number;
   unit: string;
-  supplier_id: string | null;
-  alert_threshold: number;
-  restaurant_id: string;
-  created_at: string;
-  updated_at: string;
+  supplierId: string | null;
+  alertThreshold: number | null;
+  restaurantId: string;
+  createdAt: string;
+  updatedAt: string | null;
 }
 
 export interface Supplier {
   id: string;
   name: string;
-  company_name: string | null;
+  companyName: string | null;
   email: string | null;
   phone: string | null;
   cnpj: string | null;
   address: string | null;
-  restaurant_id: string;
+  restaurantId: string;
+  createdAt?: string;
+  updatedAt?: string | null;
 }
 
 export interface StockMovement {
   id: string;
-  ingredient_id: string;
+  ingredientId: string;
   type: "IN" | "OUT";
   quantity: number;
+  description: string | null;
+  createdAt: string;
+  restaurantId: string;
+  updatedAt?: string | null;
+}
+
+export interface AccountPayable {
+  id: string;
   description: string;
-  created_at: string;
+  pixKey: string | null;
+  boletoCode: string | null;
+  createdAt: string;
+  dueDate: string;
+  paidDate: string | null;
+  restaurantId: string;
+  amount: number;
+  status: string;
+  updatedAt: string | null;
+}
+
+export interface AccountReceivable {
+  id: string;
+  description: string;
+  pixKey: string | null;
+  boletoCode: string | null;
+  createdAt: string;
+  dueDate: string;
+  receivedDate: string | null;
+  restaurantId: string;
+  amount: number;
+  status: string;
+  updatedAt: string | null;
+}
+
+export interface CashRegister {
+  id: string;
+  name: string;
+  initialAmount: number;
+  currentAmount: number;
+  openedAt: string | null;
+  closedAt: string | null;
+  status: "OPEN" | "CLOSED";
+  restaurantId: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CashMovement {
+  id: string;
+  cashRegisterId: string;
+  amount: number;
+  type: "IN" | "OUT";
+  description: string;
+  paymentMethod: string;
+  createdAt: string;
+  orderId?: number;
+  restaurantId: string;
+  updatedAt?: string;
 }

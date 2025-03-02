@@ -14,7 +14,7 @@ const Inventory = () => {
     queryKey: ["ingredients"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ingredients")
+        .from("Ingredients")
         .select("*")
         .order("name");
       
@@ -27,7 +27,7 @@ const Inventory = () => {
     queryKey: ["suppliers"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("suppliers")
+        .from("Suppliers")
         .select("*")
         .order("name");
       
@@ -40,9 +40,9 @@ const Inventory = () => {
     queryKey: ["stock-movements"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("stock_movements")
+        .from("StockMovements")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("createdAt", { ascending: false });
       
       if (error) throw error;
       return data as StockMovement[];
@@ -59,7 +59,7 @@ const Inventory = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Controle de Estoque</h1>
         <div className="flex gap-2">
-          <AddIngredientSheet suppliers={suppliers} onSuccess={handleRefresh} />
+          <AddIngredientSheet onSuccess={handleRefresh} />
           <AddSupplierSheet onSuccess={handleRefresh} />
         </div>
       </div>

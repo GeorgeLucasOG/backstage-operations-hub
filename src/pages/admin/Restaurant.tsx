@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Store } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -21,18 +21,18 @@ interface Restaurant {
   name: string;
   description: string;
   slug: string;
-  avatar_image_url: string;
-  cover_image_url: string;
-  created_at: string;
-  updated_at: string;
+  avatarImageUrl: string;
+  coverImageUrl: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface RestaurantFormData {
   name: string;
   description: string;
   slug: string;
-  avatar_image_url: string;
-  cover_image_url: string;
+  avatarImageUrl: string;
+  coverImageUrl: string;
 }
 
 const RestaurantForm = ({ onSubmit, initialData = null }: { onSubmit: (data: RestaurantFormData) => void, initialData?: Restaurant | null }) => {
@@ -41,8 +41,8 @@ const RestaurantForm = ({ onSubmit, initialData = null }: { onSubmit: (data: Res
       name: "",
       description: "",
       slug: "",
-      avatar_image_url: "",
-      cover_image_url: "",
+      avatarImageUrl: "",
+      coverImageUrl: "",
     }
   );
 
@@ -81,20 +81,20 @@ const RestaurantForm = ({ onSubmit, initialData = null }: { onSubmit: (data: Res
         />
       </div>
       <div>
-        <label htmlFor="avatar_image_url" className="block text-sm font-medium mb-1">URL do Avatar</label>
+        <label htmlFor="avatarImageUrl" className="block text-sm font-medium mb-1">URL do Avatar</label>
         <Input
-          id="avatar_image_url"
-          value={formData.avatar_image_url}
-          onChange={(e) => setFormData({ ...formData, avatar_image_url: e.target.value })}
+          id="avatarImageUrl"
+          value={formData.avatarImageUrl}
+          onChange={(e) => setFormData({ ...formData, avatarImageUrl: e.target.value })}
           required
         />
       </div>
       <div>
-        <label htmlFor="cover_image_url" className="block text-sm font-medium mb-1">URL da Capa</label>
+        <label htmlFor="coverImageUrl" className="block text-sm font-medium mb-1">URL da Capa</label>
         <Input
-          id="cover_image_url"
-          value={formData.cover_image_url}
-          onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
+          id="coverImageUrl"
+          value={formData.coverImageUrl}
+          onChange={(e) => setFormData({ ...formData, coverImageUrl: e.target.value })}
           required
         />
       </div>
@@ -110,29 +110,55 @@ const Restaurant = () => {
   const queryClient = useQueryClient();
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
 
-  const { data: restaurants, isLoading } = useQuery({
+  const { data: restaurants, isLoading, error } = useQuery({
     queryKey: ["restaurants"],
     queryFn: async () => {
+      console.log("Iniciando busca de restaurantes...");
       const { data, error } = await supabase
-        .from("restaurants")
+        .from("Restaurant") 
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("createdAt", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao buscar restaurantes:", error);
+        throw error;
+      }
+
+      console.log("Restaurantes encontrados:", data);
       return data as Restaurant[];
     },
   });
 
+  if (error) {
+    console.error("Erro na query:", error);
+    return <div>Erro ao carregar restaurantes: {(error as Error).message}</div>;
+  }
+
   const createMutation = useMutation({
     mutationFn: async (newRestaurant: RestaurantFormData) => {
+      console.log("Iniciando criação do restaurante:", newRestaurant);
+      
+      // Gerando um ID único para o novo restaurante
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      
       const { data, error } = await supabase
-        .from("restaurants")
-        .insert([newRestaurant])
-        .select()
-        .single();
+        .from("Restaurant")
+        .insert([{
+          id,
+          ...newRestaurant,
+          createdAt: now,
+          updatedAt: now
+        }])
+        .select();
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error("Erro ao criar restaurante:", error);
+        throw error;
+      }
+      
+      console.log("Restaurante criado com sucesso:", data);
+      return data[0];
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["restaurants"] });
@@ -142,6 +168,7 @@ const Restaurant = () => {
       });
     },
     onError: (error) => {
+      console.error("Erro na mutation de criação:", error);
       toast({
         title: "Erro",
         description: "Erro ao criar restaurante: " + error.message,
@@ -152,15 +179,24 @@ const Restaurant = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...updateData }: RestaurantFormData & { id: string }) => {
+      console.log("Iniciando atualização do restaurante:", id, updateData);
+      
       const { data, error } = await supabase
-        .from("restaurants")
-        .update(updateData)
+        .from("Restaurant") 
+        .update({
+          ...updateData,
+          updatedAt: new Date().toISOString()
+        })
         .eq("id", id)
-        .select()
-        .single();
+        .select();
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error("Erro ao atualizar restaurante:", error);
+        throw error;
+      }
+      
+      console.log("Restaurante atualizado com sucesso:", data);
+      return data[0];
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["restaurants"] });
@@ -171,6 +207,7 @@ const Restaurant = () => {
       });
     },
     onError: (error) => {
+      console.error("Erro na mutation de atualização:", error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar restaurante: " + error.message,
@@ -181,12 +218,19 @@ const Restaurant = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      console.log("Iniciando exclusão do restaurante:", id);
+      
       const { error } = await supabase
-        .from("restaurants")
+        .from("Restaurant") 
         .delete()
         .eq("id", id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao excluir restaurante:", error);
+        throw error;
+      }
+      
+      console.log("Restaurante excluído com sucesso");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["restaurants"] });
@@ -196,6 +240,7 @@ const Restaurant = () => {
       });
     },
     onError: (error) => {
+      console.error("Erro na mutation de exclusão:", error);
       toast({
         title: "Erro",
         description: "Erro ao excluir restaurante: " + error.message,
@@ -247,57 +292,65 @@ const Restaurant = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {restaurants?.map((restaurant) => (
-                <TableRow key={restaurant.id}>
-                  <TableCell>
-                    <img
-                      src={restaurant.avatar_image_url}
-                      alt={restaurant.name}
-                      className="h-12 w-12 object-cover rounded"
-                    />
-                  </TableCell>
-                  <TableCell>{restaurant.name}</TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {restaurant.description}
-                  </TableCell>
-                  <TableCell>{restaurant.slug}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Sheet>
-                        <SheetTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingRestaurant(restaurant)}
-                          >
-                            Editar
-                          </Button>
-                        </SheetTrigger>
-                        <SheetContent>
-                          <SheetHeader>
-                            <SheetTitle>Editar Restaurante</SheetTitle>
-                          </SheetHeader>
-                          <div className="mt-4">
-                            <RestaurantForm
-                              initialData={restaurant}
-                              onSubmit={(data) =>
-                                updateMutation.mutate({ ...data, id: restaurant.id })
-                              }
-                            />
-                          </div>
-                        </SheetContent>
-                      </Sheet>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(restaurant.id)}
-                      >
-                        Excluir
-                      </Button>
-                    </div>
+              {restaurants && restaurants.length > 0 ? (
+                restaurants.map((restaurant) => (
+                  <TableRow key={restaurant.id}>
+                    <TableCell>
+                      <img
+                        src={restaurant.avatarImageUrl}
+                        alt={restaurant.name}
+                        className="h-12 w-12 object-cover rounded"
+                      />
+                    </TableCell>
+                    <TableCell>{restaurant.name}</TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {restaurant.description}
+                    </TableCell>
+                    <TableCell>{restaurant.slug}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Sheet>
+                          <SheetTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingRestaurant(restaurant)}
+                            >
+                              Editar
+                            </Button>
+                          </SheetTrigger>
+                          <SheetContent>
+                            <SheetHeader>
+                              <SheetTitle>Editar Restaurante</SheetTitle>
+                            </SheetHeader>
+                            <div className="mt-4">
+                              <RestaurantForm
+                                initialData={restaurant}
+                                onSubmit={(data) =>
+                                  updateMutation.mutate({ ...data, id: restaurant.id })
+                                }
+                              />
+                            </div>
+                          </SheetContent>
+                        </Sheet>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(restaurant.id)}
+                        >
+                          Excluir
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-4">
+                    Nenhum restaurante encontrado. Clique em "Adicionar Restaurante" para criar um.
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>

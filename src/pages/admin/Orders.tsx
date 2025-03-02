@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -11,64 +11,50 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Plus, Check, Clock } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 interface Order {
   id: number;
   customer_name: string;
   customer_cpf: string;
-  total: number;
   table_number: number | null;
+  total: number;
   status: "PENDING" | "IN_PREPARATION" | "FINISHED";
   consumption_method: "TAKEAWAY" | "DINE_IN";
   restaurant_id: string;
   created_at: string;
-  restaurants: {
-    name: string;
-  };
+  updated_at?: string;
 }
 
 interface OrderFormData {
   customer_name: string;
   customer_cpf: string;
-  total: number;
-  table_number?: number;
-  status: "PENDING" | "IN_PREPARATION" | "FINISHED";
+  table_number: string;
+  total: string;
   consumption_method: "TAKEAWAY" | "DINE_IN";
   restaurant_id: string;
 }
 
-interface Restaurant {
-  id: string;
-  name: string;
-}
+const OrderForm = ({ onSubmit }: { onSubmit: (data: OrderFormData) => void }) => {
+  const [formData, setFormData] = useState<OrderFormData>({
+    customer_name: "",
+    customer_cpf: "",
+    table_number: "",
+    total: "",
+    consumption_method: "DINE_IN",
+    restaurant_id: DEFAULT_RESTAURANT_ID,
+  });
 
-const OrderForm = ({ onSubmit, initialData = null, restaurants }: {
-  onSubmit: (data: OrderFormData) => void,
-  initialData?: Order | null,
-  restaurants: Restaurant[]
-}) => {
-  const [formData, setFormData] = useState<OrderFormData>(
-    initialData || {
-      customer_name: "",
-      customer_cpf: "",
-      total: 0,
-      table_number: undefined,
-      status: "PENDING",
-      consumption_method: "DINE_IN",
-      restaurant_id: "",
-    }
-  );
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,124 +62,94 @@ const OrderForm = ({ onSubmit, initialData = null, restaurants }: {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="customer_name" className="block text-sm font-medium mb-1">Nome do Cliente</label>
+    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+      <div className="space-y-2">
+        <Label htmlFor="customer_name">Nome do Cliente</Label>
         <Input
           id="customer_name"
+          name="customer_name"
           value={formData.customer_name}
-          onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+          onChange={handleChange}
           required
         />
       </div>
-      <div>
-        <label htmlFor="customer_cpf" className="block text-sm font-medium mb-1">CPF do Cliente</label>
+      <div className="space-y-2">
+        <Label htmlFor="customer_cpf">CPF</Label>
         <Input
           id="customer_cpf"
+          name="customer_cpf"
           value={formData.customer_cpf}
-          onChange={(e) => setFormData({ ...formData, customer_cpf: e.target.value })}
+          onChange={handleChange}
           required
         />
       </div>
-      <div>
-        <label htmlFor="total" className="block text-sm font-medium mb-1">Total</label>
-        <Input
-          id="total"
-          type="number"
-          step="0.01"
-          value={formData.total}
-          onChange={(e) => setFormData({ ...formData, total: parseFloat(e.target.value) })}
-          required
-        />
-      </div>
-      <div>
-        <label htmlFor="consumption_method" className="block text-sm font-medium mb-1">Método de Consumo</label>
-        <Select
+      <div className="space-y-2">
+        <Label htmlFor="consumption_method">Método de Consumo</Label>
+        <select
+          id="consumption_method"
+          name="consumption_method"
+          className="w-full p-2 border rounded"
           value={formData.consumption_method}
-          onValueChange={(value: "TAKEAWAY" | "DINE_IN") => {
-            setFormData({ 
-              ...formData, 
-              consumption_method: value,
-              table_number: value === "TAKEAWAY" ? undefined : formData.table_number 
-            })
-          }}
+          onChange={handleChange}
+          required
         >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione o método de consumo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="DINE_IN">Consumo no Local</SelectItem>
-            <SelectItem value="TAKEAWAY">Para Viagem</SelectItem>
-          </SelectContent>
-        </Select>
+          <option value="DINE_IN">No Local</option>
+          <option value="TAKEAWAY">Para Viagem</option>
+        </select>
       </div>
       {formData.consumption_method === "DINE_IN" && (
-        <div>
-          <label htmlFor="table_number" className="block text-sm font-medium mb-1">Número da Mesa</label>
+        <div className="space-y-2">
+          <Label htmlFor="table_number">Número da Mesa</Label>
           <Input
             id="table_number"
+            name="table_number"
             type="number"
-            value={formData.table_number || ""}
-            onChange={(e) => setFormData({ ...formData, table_number: parseInt(e.target.value) })}
-            required
+            value={formData.table_number}
+            onChange={handleChange}
+            required={formData.consumption_method === "DINE_IN"}
           />
         </div>
       )}
-      <div>
-        <label htmlFor="status" className="block text-sm font-medium mb-1">Status</label>
-        <Select
-          value={formData.status}
-          onValueChange={(value: "PENDING" | "IN_PREPARATION" | "FINISHED") => 
-            setFormData({ ...formData, status: value })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione o status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="PENDING">Pendente</SelectItem>
-            <SelectItem value="IN_PREPARATION">Em Preparação</SelectItem>
-            <SelectItem value="FINISHED">Finalizado</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <label htmlFor="restaurant" className="block text-sm font-medium mb-1">Restaurante</label>
-        <Select
-          value={formData.restaurant_id}
-          onValueChange={(value) => setFormData({ ...formData, restaurant_id: value })}
+      <div className="space-y-2">
+        <Label htmlFor="total">Valor Total</Label>
+        <Input
+          id="total"
+          name="total"
+          type="number"
+          step="0.01"
+          value={formData.total}
+          onChange={handleChange}
           required
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione um restaurante" />
-          </SelectTrigger>
-          <SelectContent>
-            {restaurants.map((restaurant) => (
-              <SelectItem key={restaurant.id} value={restaurant.id}>
-                {restaurant.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
       </div>
-      <Button type="submit" className="w-full">
-        {initialData ? "Atualizar" : "Criar"} Pedido
-      </Button>
+      <Button type="submit" className="w-full">Criar Pedido</Button>
     </form>
   );
+};
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case "PENDING":
+      return <Badge variant="outline">Pendente</Badge>;
+    case "IN_PREPARATION":
+      return <Badge variant="secondary">Em Preparação</Badge>;
+    case "FINISHED":
+      return <Badge variant="success">Finalizado</Badge>;
+    default:
+      return <Badge>{status}</Badge>;
+  }
 };
 
 const Orders = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
-  const { data: orders, isLoading: isLoadingOrders } = useQuery({
+  const { data: orders, isLoading } = useQuery({
     queryKey: ["orders"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("*, restaurants(name)")
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -201,29 +157,26 @@ const Orders = () => {
     },
   });
 
-  const { data: restaurants } = useQuery({
-    queryKey: ["restaurants"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("restaurants")
-        .select("id, name")
-        .order("name");
-
-      if (error) throw error;
-      return data as Restaurant[];
-    },
-  });
-
   const createMutation = useMutation({
-    mutationFn: async (newOrder: OrderFormData) => {
-      const { data, error } = await supabase
+    mutationFn: async (orderData: OrderFormData) => {
+      // Se for para viagem, remover o número da mesa
+      const data = {
+        ...orderData,
+        table_number: orderData.consumption_method === "DINE_IN" 
+          ? parseInt(orderData.table_number) 
+          : null,
+        total: parseFloat(orderData.total),
+        status: "PENDING" as const,
+      };
+
+      const { data: newOrder, error } = await supabase
         .from("orders")
-        .insert([newOrder])
+        .insert([data])
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return newOrder;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
@@ -241,40 +194,11 @@ const Orders = () => {
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, ...updateData }: OrderFormData & { id: number }) => {
-      const { data, error } = await supabase
-        .from("orders")
-        .update(updateData)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      setEditingOrder(null);
-      toast({
-        title: "Sucesso",
-        description: "Pedido atualizado com sucesso!",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar pedido: " + error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
       const { error } = await supabase
         .from("orders")
-        .delete()
+        .update({ status })
         .eq("id", id);
 
       if (error) throw error;
@@ -283,39 +207,20 @@ const Orders = () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       toast({
         title: "Sucesso",
-        description: "Pedido excluído com sucesso!",
+        description: "Status do pedido atualizado!",
       });
     },
     onError: (error) => {
       toast({
         title: "Erro",
-        description: "Erro ao excluir pedido: " + error.message,
+        description: "Erro ao atualizar status: " + error.message,
         variant: "destructive",
       });
     },
   });
 
-  const handleDelete = (id: number) => {
-    if (window.confirm("Tem certeza que deseja excluir este pedido?")) {
-      deleteMutation.mutate(id);
-    }
-  };
-
-  const formatStatus = (status: Order["status"]) => {
-    const statusMap = {
-      PENDING: "Pendente",
-      IN_PREPARATION: "Em Preparação",
-      FINISHED: "Finalizado"
-    };
-    return statusMap[status];
-  };
-
-  const formatConsumptionMethod = (method: Order["consumption_method"]) => {
-    const methodMap = {
-      TAKEAWAY: "Para Viagem",
-      DINE_IN: "Consumo no Local"
-    };
-    return methodMap[method];
+  const formatConsumption = (method: string) => {
+    return method === "DINE_IN" ? "No Local" : "Para Viagem";
   };
 
   return (
@@ -324,25 +229,21 @@ const Orders = () => {
         <h1 className="text-2xl font-bold">Pedidos</h1>
         <Sheet>
           <SheetTrigger asChild>
-            <Button>Novo Pedido</Button>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Pedido
+            </Button>
           </SheetTrigger>
           <SheetContent>
             <SheetHeader>
               <SheetTitle>Novo Pedido</SheetTitle>
             </SheetHeader>
-            <div className="mt-4">
-              {restaurants && (
-                <OrderForm
-                  onSubmit={(data) => createMutation.mutate(data)}
-                  restaurants={restaurants}
-                />
-              )}
-            </div>
+            <OrderForm onSubmit={(data) => createMutation.mutate(data)} />
           </SheetContent>
         </Sheet>
       </div>
 
-      {isLoadingOrders ? (
+      {isLoading ? (
         <div>Carregando...</div>
       ) : (
         <div className="border rounded-lg">
@@ -351,66 +252,75 @@ const Orders = () => {
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Restaurante</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Consumo</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Mesa</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Total</TableHead>
                 <TableHead>Data</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders?.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell>{order.id}</TableCell>
-                  <TableCell>{order.customer_name}</TableCell>
-                  <TableCell>{order.restaurants.name}</TableCell>
-                  <TableCell>R$ {order.total.toFixed(2)}</TableCell>
-                  <TableCell>{formatConsumptionMethod(order.consumption_method)}</TableCell>
-                  <TableCell>{order.table_number || "-"}</TableCell>
-                  <TableCell>{formatStatus(order.status)}</TableCell>
-                  <TableCell>{format(new Date(order.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Sheet>
-                        <SheetTrigger asChild>
+              {orders && orders.length > 0 ? (
+                orders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell>#{order.id}</TableCell>
+                    <TableCell>{order.customer_name}</TableCell>
+                    <TableCell>{formatConsumption(order.consumption_method)}</TableCell>
+                    <TableCell>{order.table_number || "-"}</TableCell>
+                    <TableCell>
+                      {new Intl.NumberFormat("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      }).format(order.total)}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(order.created_at), "dd/MM/yyyy HH:mm")}
+                    </TableCell>
+                    <TableCell>{getStatusLabel(order.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {order.status === "PENDING" && (
                           <Button
-                            variant="outline"
                             size="sm"
-                            onClick={() => setEditingOrder(order)}
+                            variant="outline"
+                            onClick={() =>
+                              updateStatusMutation.mutate({
+                                id: order.id,
+                                status: "IN_PREPARATION",
+                              })
+                            }
                           >
-                            Editar
+                            <Clock className="h-4 w-4 mr-1" />
+                            Preparando
                           </Button>
-                        </SheetTrigger>
-                        <SheetContent>
-                          <SheetHeader>
-                            <SheetTitle>Editar Pedido</SheetTitle>
-                          </SheetHeader>
-                          <div className="mt-4">
-                            {restaurants && (
-                              <OrderForm
-                                initialData={order}
-                                onSubmit={(data) =>
-                                  updateMutation.mutate({ ...data, id: order.id })
-                                }
-                                restaurants={restaurants}
-                              />
-                            )}
-                          </div>
-                        </SheetContent>
-                      </Sheet>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(order.id)}
-                      >
-                        Excluir
-                      </Button>
-                    </div>
+                        )}
+                        {order.status === "IN_PREPARATION" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              updateStatusMutation.mutate({
+                                id: order.id,
+                                status: "FINISHED",
+                              })
+                            }
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Finalizar
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-4">
+                    Nenhum pedido encontrado
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>

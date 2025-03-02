@@ -12,7 +12,7 @@ export function LowStockAlerts({ ingredients }: LowStockAlertsProps) {
     <Card className="p-4">
       <h2 className="text-lg font-semibold mb-4">Alertas de Estoque Baixo</h2>
       <div className="space-y-2">
-        {ingredients?.filter(i => i.quantity <= i.alert_threshold).map(ingredient => (
+        {ingredients?.filter(i => i.quantity <= i.alertThreshold).map(ingredient => (
           <div
             key={ingredient.id}
             className="flex items-center gap-2 p-2 bg-red-50 text-red-700 rounded"

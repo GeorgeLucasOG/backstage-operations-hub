@@ -12,7 +12,7 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Ingredient } from "../types";
 
@@ -24,7 +24,7 @@ interface StockMovementSheetProps {
 export function StockMovementSheet({ ingredient, onSuccess }: StockMovementSheetProps) {
   const { toast } = useToast();
   const [movementData, setMovementData] = useState({
-    ingredient_id: "",
+    ingredientId: "",
     type: "IN" as "IN" | "OUT",
     quantity: "",
     description: "",
@@ -44,24 +44,24 @@ export function StockMovementSheet({ ingredient, onSuccess }: StockMovementSheet
         newQuantity -= movementQuantity;
       }
 
-      const { error: movementError } = await supabase.from("stock_movements").insert({
-        ingredient_id: ingredient.id,
+      const { error: movementError } = await supabase.from("StockMovements").insert({
+        ingredientId: ingredient.id,
         type: movementData.type,
         quantity: movementQuantity,
         description: movementData.description,
-        restaurant_id: "temp-id",
+        restaurantId: DEFAULT_RESTAURANT_ID,
       });
 
       if (movementError) throw movementError;
 
       const { error: updateError } = await supabase
-        .from("ingredients")
+        .from("Ingredients")
         .update({ quantity: newQuantity })
         .eq("id", ingredient.id);
 
       if (updateError) throw updateError;
 
-      if (newQuantity <= ingredient.alert_threshold) {
+      if (newQuantity <= ingredient.alertThreshold!) {
         toast({
           title: "Alerta de Estoque",
           description: `O ingrediente ${ingredient.name} está com estoque baixo!`,
@@ -75,7 +75,7 @@ export function StockMovementSheet({ ingredient, onSuccess }: StockMovementSheet
       });
 
       setMovementData({
-        ingredient_id: "",
+        ingredientId: "",
         type: "IN",
         quantity: "",
         description: "",

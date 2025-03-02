@@ -39,10 +39,10 @@ export function IngredientsList({ ingredients, suppliers, onMovement }: Ingredie
               <TableCell>{ingredient.name}</TableCell>
               <TableCell>{ingredient.quantity}</TableCell>
               <TableCell>{ingredient.unit}</TableCell>
-              <TableCell>{ingredient.min_quantity}</TableCell>
-              <TableCell>{ingredient.alert_threshold}</TableCell>
+              <TableCell>{ingredient.minQuantity}</TableCell>
+              <TableCell>{ingredient.alertThreshold}</TableCell>
               <TableCell>
-                {suppliers?.find(s => s.id === ingredient.supplier_id)?.name || "-"}
+                {suppliers?.find(s => s.id === ingredient.supplierId)?.name || "-"}
               </TableCell>
               <TableCell>
                 <StockMovementSheet ingredient={ingredient} onSuccess={onMovement} />

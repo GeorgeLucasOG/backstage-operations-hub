@@ -34,10 +34,10 @@ export function MovementHistory({ movements, ingredients }: MovementHistoryProps
           {movements?.map((movement) => (
             <TableRow key={movement.id}>
               <TableCell>
-                {format(new Date(movement.created_at), "dd/MM/yyyy HH:mm")}
+                {format(new Date(movement.createdAt), "dd/MM/yyyy HH:mm")}
               </TableCell>
               <TableCell>
-                {ingredients?.find(i => i.id === movement.ingredient_id)?.name}
+                {ingredients?.find(i => i.id === movement.ingredientId)?.name}
               </TableCell>
               <TableCell>{movement.type === "IN" ? "Entrada" : "Saída"}</TableCell>
               <TableCell>{movement.quantity}</TableCell>

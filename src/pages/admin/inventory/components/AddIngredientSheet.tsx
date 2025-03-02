@@ -1,5 +1,7 @@
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,39 +12,48 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-  SheetClose,
 } from "@/components/ui/sheet";
-import { Plus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Supplier } from "../types";
 
-interface AddIngredientSheetProps {
-  suppliers: Supplier[] | undefined;
-  onSuccess: () => void;
-}
-
-export function AddIngredientSheet({ suppliers, onSuccess }: AddIngredientSheetProps) {
+export function AddIngredientSheet({ onSuccess }: { onSuccess: () => void }) {
   const { toast } = useToast();
-  const [newIngredient, setNewIngredient] = useState({
+  const [ingredientData, setIngredientData] = useState({
     name: "",
     quantity: "",
-    min_quantity: "",
+    minQuantity: "",
+    alertThreshold: "",
     unit: "",
-    alert_threshold: "",
-    supplier_id: "",
+    supplierId: "",
   });
 
-  const handleAddIngredient = async () => {
+  const { data: suppliers } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("Suppliers")
+        .select("*");
+      
+      if (error) throw error;
+      return data as Supplier[];
+    }
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setIngredientData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async () => {
     try {
-      const { error } = await supabase.from("ingredients").insert({
-        name: newIngredient.name,
-        quantity: parseFloat(newIngredient.quantity),
-        min_quantity: parseFloat(newIngredient.min_quantity),
-        unit: newIngredient.unit,
-        alert_threshold: parseFloat(newIngredient.alert_threshold),
-        supplier_id: newIngredient.supplier_id || null,
-        restaurant_id: "temp-id",
+      const { error } = await supabase.from("Ingredients").insert({
+        name: ingredientData.name,
+        quantity: parseFloat(ingredientData.quantity) || 0,
+        minQuantity: parseFloat(ingredientData.minQuantity) || 0,
+        alertThreshold: parseFloat(ingredientData.alertThreshold) || 0,
+        unit: ingredientData.unit,
+        supplierId: ingredientData.supplierId || null,
+        restaurantId: DEFAULT_RESTAURANT_ID,
       });
 
       if (error) throw error;
@@ -52,19 +63,21 @@ export function AddIngredientSheet({ suppliers, onSuccess }: AddIngredientSheetP
         description: "Ingrediente adicionado com sucesso!",
       });
 
-      setNewIngredient({
+      setIngredientData({
         name: "",
         quantity: "",
-        min_quantity: "",
+        minQuantity: "",
+        alertThreshold: "",
         unit: "",
-        alert_threshold: "",
-        supplier_id: "",
+        supplierId: "",
       });
+
       onSuccess();
     } catch (error) {
+      console.error("Erro ao adicionar ingrediente:", error);
       toast({
         title: "Erro",
-        description: "Erro ao adicionar ingrediente",
+        description: "Não foi possível adicionar o ingrediente",
         variant: "destructive",
       });
     }
@@ -73,71 +86,89 @@ export function AddIngredientSheet({ suppliers, onSuccess }: AddIngredientSheetP
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Ingrediente
-        </Button>
+        <Button>Adicionar Ingrediente</Button>
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
           <SheetTitle>Adicionar Ingrediente</SheetTitle>
           <SheetDescription>
-            Cadastre um novo ingrediente no estoque
+            Preencha os dados para adicionar um novo ingrediente ao estoque
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-4 py-4">
-          <Input
-            placeholder="Nome"
-            value={newIngredient.name}
-            onChange={(e) => setNewIngredient(prev => ({ ...prev, name: e.target.value }))}
-          />
-          <Input
-            type="number"
-            placeholder="Quantidade"
-            value={newIngredient.quantity}
-            onChange={(e) => setNewIngredient(prev => ({ ...prev, quantity: e.target.value }))}
-          />
-          <Input
-            type="number"
-            placeholder="Quantidade Mínima"
-            value={newIngredient.min_quantity}
-            onChange={(e) => setNewIngredient(prev => ({ ...prev, min_quantity: e.target.value }))}
-          />
-          <Input
-            type="number"
-            placeholder="Alerta de Estoque Baixo"
-            value={newIngredient.alert_threshold}
-            onChange={(e) => setNewIngredient(prev => ({ ...prev, alert_threshold: e.target.value }))}
-          />
-          <select
-            className="w-full p-2 border rounded"
-            value={newIngredient.unit}
-            onChange={(e) => setNewIngredient(prev => ({ ...prev, unit: e.target.value }))}
-          >
-            <option value="">Selecione a Unidade</option>
-            <option value="L">Litros</option>
-            <option value="KG">Kilogramas</option>
-            <option value="UN">Unidades</option>
-            <option value="G">Gramas</option>
-            <option value="ML">Mililitros</option>
-          </select>
-          <select
-            className="w-full p-2 border rounded"
-            value={newIngredient.supplier_id}
-            onChange={(e) => setNewIngredient(prev => ({ ...prev, supplier_id: e.target.value }))}
-          >
-            <option value="">Selecione o Fornecedor</option>
-            {suppliers?.map(supplier => (
-              <option key={supplier.id} value={supplier.id}>
-                {supplier.name}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-2">
+            <label htmlFor="name">Nome</label>
+            <Input 
+              id="name"
+              name="name"
+              value={ingredientData.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="quantity">Quantidade Atual</label>
+            <Input 
+              id="quantity"
+              name="quantity"
+              type="number"
+              value={ingredientData.quantity}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="minQuantity">Quantidade Mínima</label>
+            <Input 
+              id="minQuantity"
+              name="minQuantity"
+              type="number"
+              value={ingredientData.minQuantity}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="alertThreshold">Limite para Alerta</label>
+            <Input 
+              id="alertThreshold"
+              name="alertThreshold"
+              type="number"
+              value={ingredientData.alertThreshold}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="unit">Unidade</label>
+            <Input 
+              id="unit"
+              name="unit"
+              value={ingredientData.unit}
+              onChange={handleChange}
+              placeholder="kg, g, L, ml, unidade"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="supplierId">Fornecedor</label>
+            <select
+              id="supplierId"
+              name="supplierId"
+              className="w-full p-2 border rounded"
+              value={ingredientData.supplierId}
+              onChange={handleChange}
+            >
+              <option value="">Selecione um fornecedor</option>
+              {suppliers?.map((supplier) => (
+                <option key={supplier.id} value={supplier.id}>
+                  {supplier.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <SheetFooter>
-          <SheetClose asChild>
-            <Button onClick={handleAddIngredient}>Adicionar Ingrediente</Button>
-          </SheetClose>
+          <Button onClick={handleSubmit}>Adicionar</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

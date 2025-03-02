@@ -5,22 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-
-type AccountReceivable = {
-  id: string;
-  description: string;
-  pix_key: string | null;
-  boleto_code: string | null;
-  created_at: string;
-  due_date: string;
-  received_date: string | null;
-  restaurant_id: string;
-  amount: number;
-  status: string;
-  updated_at: string;
-};
+import { AccountReceivable } from "./inventory/types";
 
 const AccountsReceivable = () => {
   const { toast } = useToast();
@@ -34,9 +21,9 @@ const AccountsReceivable = () => {
     queryKey: ["accounts-receivable"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("accounts_receivable")
+        .from("AccountsReceivable")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("createdAt", { ascending: false });
 
       if (error) throw error;
       return data as AccountReceivable[];
@@ -47,13 +34,13 @@ const AccountsReceivable = () => {
     e.preventDefault();
 
     try {
-      const { error } = await supabase.from("accounts_receivable").insert({
+      const { error } = await supabase.from("AccountsReceivable").insert({
         description,
-        pix_key: pixKey,
-        boleto_code: boletoCode,
-        due_date: dueDate,
+        pixKey: pixKey || null,
+        boletoCode: boletoCode || null,
+        dueDate: dueDate,
         amount: parseFloat(amount),
-        restaurant_id: "temp-id", // Você precisará obter o ID do restaurante real
+        restaurantId: DEFAULT_RESTAURANT_ID,
         status: "PENDING"
       });
 
@@ -74,6 +61,7 @@ const AccountsReceivable = () => {
       // Recarregar dados
       refetch();
     } catch (error) {
+      console.error("Erro ao criar conta a receber:", error);
       toast({
         title: "Erro",
         description: "Erro ao criar conta a receber",
@@ -140,10 +128,10 @@ const AccountsReceivable = () => {
             {accounts?.map((account) => (
               <TableRow key={account.id}>
                 <TableCell>{account.description}</TableCell>
-                <TableCell>{account.pix_key}</TableCell>
-                <TableCell>{account.boleto_code}</TableCell>
-                <TableCell>{new Date(account.created_at).toLocaleDateString()}</TableCell>
-                <TableCell>{new Date(account.due_date).toLocaleDateString()}</TableCell>
+                <TableCell>{account.pixKey}</TableCell>
+                <TableCell>{account.boletoCode}</TableCell>
+                <TableCell>{new Date(account.createdAt).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(account.dueDate).toLocaleDateString()}</TableCell>
                 <TableCell>R$ {account.amount.toFixed(2)}</TableCell>
                 <TableCell>{account.status}</TableCell>
               </TableRow>

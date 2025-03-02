@@ -33,7 +33,7 @@ export function SuppliersList({ suppliers }: SuppliersListProps) {
           {suppliers?.map((supplier) => (
             <TableRow key={supplier.id}>
               <TableCell>{supplier.name}</TableCell>
-              <TableCell>{supplier.company_name || "-"}</TableCell>
+              <TableCell>{supplier.companyName || "-"}</TableCell>
               <TableCell>{supplier.cnpj || "-"}</TableCell>
               <TableCell>{supplier.email}</TableCell>
               <TableCell>{supplier.phone}</TableCell>
