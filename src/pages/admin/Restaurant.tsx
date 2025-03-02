@@ -115,7 +115,7 @@ const Restaurant = () => {
     queryFn: async () => {
       console.log("Iniciando busca de restaurantes...");
       const { data, error } = await supabase
-        .from("Restaurant") // Aqui corrigimos o nome da tabela para "Restaurant" (com R maiúsculo)
+        .from("Restaurant") 
         .select("*")
         .order("createdAt", { ascending: false });
 
@@ -138,9 +138,18 @@ const Restaurant = () => {
     mutationFn: async (newRestaurant: RestaurantFormData) => {
       console.log("Iniciando criação do restaurante:", newRestaurant);
       
+      // Gerando um ID único para o novo restaurante
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      
       const { data, error } = await supabase
-        .from("Restaurant") // Aqui corrigimos o nome da tabela para "Restaurant" (com R maiúsculo)
-        .insert([newRestaurant])
+        .from("Restaurant")
+        .insert([{
+          id,
+          ...newRestaurant,
+          createdAt: now,
+          updatedAt: now
+        }])
         .select();
 
       if (error) {
@@ -173,8 +182,11 @@ const Restaurant = () => {
       console.log("Iniciando atualização do restaurante:", id, updateData);
       
       const { data, error } = await supabase
-        .from("Restaurant") // Aqui corrigimos o nome da tabela para "Restaurant" (com R maiúsculo)
-        .update(updateData)
+        .from("Restaurant") 
+        .update({
+          ...updateData,
+          updatedAt: new Date().toISOString()
+        })
         .eq("id", id)
         .select();
 
@@ -209,7 +221,7 @@ const Restaurant = () => {
       console.log("Iniciando exclusão do restaurante:", id);
       
       const { error } = await supabase
-        .from("Restaurant") // Aqui corrigimos o nome da tabela para "Restaurant" (com R maiúsculo)
+        .from("Restaurant") 
         .delete()
         .eq("id", id);
 
