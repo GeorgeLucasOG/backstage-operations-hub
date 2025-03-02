@@ -1,7 +1,9 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
+import {
+  supabase,
+  DEFAULT_RESTAURANT_ID,
+} from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -12,46 +14,68 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Plus, Check, Clock } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
+// Função para gerar UUID v4
+function generateUUID() {
+  // Implementação simples de UUID v4
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 interface Order {
   id: number;
-  customer_name: string;
-  customer_cpf: string;
-  table_number: number | null;
+  customerName: string;
+  customerCpf: string;
+  tableNumber?: number | null;
   total: number;
   status: "PENDING" | "IN_PREPARATION" | "FINISHED";
-  consumption_method: "TAKEAWAY" | "DINE_IN";
-  restaurant_id: string;
-  created_at: string;
-  updated_at?: string;
+  consumptionMethod: "TAKEAWAY" | "DINE_IN";
+  restaurantId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface OrderFormData {
-  customer_name: string;
-  customer_cpf: string;
-  table_number: string;
+  customerName: string;
+  customerCpf: string;
+  tableNumber: string;
   total: string;
-  consumption_method: "TAKEAWAY" | "DINE_IN";
-  restaurant_id: string;
+  consumptionMethod: "TAKEAWAY" | "DINE_IN";
+  restaurantId: string;
 }
 
-const OrderForm = ({ onSubmit }: { onSubmit: (data: OrderFormData) => void }) => {
+const OrderForm = ({
+  onSubmit,
+}: {
+  onSubmit: (data: OrderFormData) => void;
+}) => {
   const [formData, setFormData] = useState<OrderFormData>({
-    customer_name: "",
-    customer_cpf: "",
-    table_number: "",
+    customerName: "",
+    customerCpf: "",
+    tableNumber: "",
     total: "",
-    consumption_method: "DINE_IN",
-    restaurant_id: DEFAULT_RESTAURANT_ID,
+    consumptionMethod: "DINE_IN",
+    restaurantId: DEFAULT_RESTAURANT_ID,
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -64,32 +88,32 @@ const OrderForm = ({ onSubmit }: { onSubmit: (data: OrderFormData) => void }) =>
   return (
     <form onSubmit={handleSubmit} className="space-y-4 mt-4">
       <div className="space-y-2">
-        <Label htmlFor="customer_name">Nome do Cliente</Label>
+        <Label htmlFor="customerName">Nome do Cliente</Label>
         <Input
-          id="customer_name"
-          name="customer_name"
-          value={formData.customer_name}
+          id="customerName"
+          name="customerName"
+          value={formData.customerName}
           onChange={handleChange}
           required
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="customer_cpf">CPF</Label>
+        <Label htmlFor="customerCpf">CPF</Label>
         <Input
-          id="customer_cpf"
-          name="customer_cpf"
-          value={formData.customer_cpf}
+          id="customerCpf"
+          name="customerCpf"
+          value={formData.customerCpf}
           onChange={handleChange}
           required
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="consumption_method">Método de Consumo</Label>
+        <Label htmlFor="consumptionMethod">Método de Consumo</Label>
         <select
-          id="consumption_method"
-          name="consumption_method"
+          id="consumptionMethod"
+          name="consumptionMethod"
           className="w-full p-2 border rounded"
-          value={formData.consumption_method}
+          value={formData.consumptionMethod}
           onChange={handleChange}
           required
         >
@@ -97,16 +121,16 @@ const OrderForm = ({ onSubmit }: { onSubmit: (data: OrderFormData) => void }) =>
           <option value="TAKEAWAY">Para Viagem</option>
         </select>
       </div>
-      {formData.consumption_method === "DINE_IN" && (
+      {formData.consumptionMethod === "DINE_IN" && (
         <div className="space-y-2">
-          <Label htmlFor="table_number">Número da Mesa</Label>
+          <Label htmlFor="tableNumber">Número da Mesa</Label>
           <Input
-            id="table_number"
-            name="table_number"
+            id="tableNumber"
+            name="tableNumber"
             type="number"
-            value={formData.table_number}
+            value={formData.tableNumber}
             onChange={handleChange}
-            required={formData.consumption_method === "DINE_IN"}
+            required={formData.consumptionMethod === "DINE_IN"}
           />
         </div>
       )}
@@ -122,7 +146,9 @@ const OrderForm = ({ onSubmit }: { onSubmit: (data: OrderFormData) => void }) =>
           required
         />
       </div>
-      <Button type="submit" className="w-full">Criar Pedido</Button>
+      <Button type="submit" className="w-full">
+        Criar Pedido
+      </Button>
     </form>
   );
 };
@@ -134,7 +160,11 @@ const getStatusLabel = (status: string) => {
     case "IN_PREPARATION":
       return <Badge variant="secondary">Em Preparação</Badge>;
     case "FINISHED":
-      return <Badge variant="success">Finalizado</Badge>;
+      return (
+        <Badge className="bg-green-100 text-green-800 border-green-200">
+          Finalizado
+        </Badge>
+      );
     default:
       return <Badge>{status}</Badge>;
   }
@@ -144,39 +174,67 @@ const Orders = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: orders, isLoading } = useQuery({
+  const {
+    data: orders,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["orders"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false });
+      console.log("Consultando pedidos...");
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from("Order") // Corrigindo para PascalCase
+        .select("*")
+        .order("createdAt", { ascending: false });
+
+      if (error) {
+        console.error("Erro ao consultar pedidos:", error);
+        throw error;
+      }
+
+      console.log("Pedidos encontrados:", data);
       return data as Order[];
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (orderData: OrderFormData) => {
+      console.log("Criando novo pedido com dados:", orderData);
+
       // Se for para viagem, remover o número da mesa
+      const tableNumber =
+        orderData.consumptionMethod === "DINE_IN"
+          ? parseInt(orderData.tableNumber)
+          : null;
+
+      const now = new Date().toISOString();
       const data = {
-        ...orderData,
-        table_number: orderData.consumption_method === "DINE_IN" 
-          ? parseInt(orderData.table_number) 
-          : null,
+        customerName: orderData.customerName,
+        customerCpf: orderData.customerCpf,
+        tableNumber,
         total: parseFloat(orderData.total),
         status: "PENDING" as const,
+        consumptionMethod: orderData.consumptionMethod,
+        restaurantId: orderData.restaurantId,
+        createdAt: now,
+        updatedAt: now,
       };
 
-      const { data: newOrder, error } = await supabase
-        .from("orders")
-        .insert([data])
-        .select()
-        .single();
+      console.log("Payload para criação de pedido:", data);
 
-      if (error) throw error;
-      return newOrder;
+      const { data: newOrder, error } = await supabase
+        .from("Order") // Corrigindo para PascalCase
+        .insert([data])
+        .select();
+
+      if (error) {
+        console.error("Erro ao criar pedido:", error);
+        throw error;
+      }
+
+      console.log("Pedido criado com sucesso:", newOrder);
+      return newOrder[0];
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
@@ -186,22 +244,42 @@ const Orders = () => {
       });
     },
     onError: (error) => {
+      console.error("Erro detalhado:", error);
       toast({
         title: "Erro",
-        description: "Erro ao criar pedido: " + error.message,
+        description:
+          "Erro ao criar pedido: " +
+          (error instanceof Error ? error.message : "Erro desconhecido"),
         variant: "destructive",
       });
     },
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+    mutationFn: async ({
+      id,
+      status,
+    }: {
+      id: number;
+      status: "PENDING" | "IN_PREPARATION" | "FINISHED";
+    }) => {
+      console.log(`Atualizando status do pedido ${id} para ${status}`);
+
+      const now = new Date().toISOString();
       const { error } = await supabase
-        .from("orders")
-        .update({ status })
+        .from("Order") // Corrigindo para PascalCase
+        .update({
+          status,
+          updatedAt: now,
+        })
         .eq("id", id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao atualizar status:", error);
+        throw error;
+      }
+
+      console.log("Status atualizado com sucesso");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
@@ -211,9 +289,12 @@ const Orders = () => {
       });
     },
     onError: (error) => {
+      console.error("Erro detalhado:", error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar status: " + error.message,
+        description:
+          "Erro ao atualizar status: " +
+          (error instanceof Error ? error.message : "Erro desconhecido"),
         variant: "destructive",
       });
     },
@@ -222,6 +303,17 @@ const Orders = () => {
   const formatConsumption = (method: string) => {
     return method === "DINE_IN" ? "No Local" : "Para Viagem";
   };
+
+  // Se houver um erro na consulta, mostrar mensagem
+  if (error) {
+    console.error("Erro na consulta de pedidos:", error);
+    return (
+      <div className="py-8 rounded-lg border-red-200 border p-4 bg-red-50 text-red-700">
+        <h2 className="text-lg font-semibold mb-2">Erro ao carregar pedidos</h2>
+        <p>{error instanceof Error ? error.message : "Erro desconhecido"}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -265,9 +357,11 @@ const Orders = () => {
                 orders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell>#{order.id}</TableCell>
-                    <TableCell>{order.customer_name}</TableCell>
-                    <TableCell>{formatConsumption(order.consumption_method)}</TableCell>
-                    <TableCell>{order.table_number || "-"}</TableCell>
+                    <TableCell>{order.customerName}</TableCell>
+                    <TableCell>
+                      {formatConsumption(order.consumptionMethod)}
+                    </TableCell>
+                    <TableCell>{order.tableNumber || "-"}</TableCell>
                     <TableCell>
                       {new Intl.NumberFormat("pt-BR", {
                         style: "currency",
@@ -275,7 +369,7 @@ const Orders = () => {
                       }).format(order.total)}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(order.created_at), "dd/MM/yyyy HH:mm")}
+                      {format(new Date(order.createdAt), "dd/MM/yyyy HH:mm")}
                     </TableCell>
                     <TableCell>{getStatusLabel(order.status)}</TableCell>
                     <TableCell>
