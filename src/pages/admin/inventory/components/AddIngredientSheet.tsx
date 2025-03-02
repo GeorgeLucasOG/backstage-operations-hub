@@ -14,6 +14,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/use-toast";
+import { Supplier } from "../types";
 
 export function AddIngredientSheet({ onSuccess }: { onSuccess: () => void }) {
   const { toast } = useToast();
@@ -34,7 +35,7 @@ export function AddIngredientSheet({ onSuccess }: { onSuccess: () => void }) {
         .select("*");
       
       if (error) throw error;
-      return data;
+      return data as Supplier[];
     }
   });
 
@@ -52,7 +53,7 @@ export function AddIngredientSheet({ onSuccess }: { onSuccess: () => void }) {
         alert_threshold: parseFloat(ingredientData.alert_threshold) || 0,
         unit: ingredientData.unit,
         supplier_id: ingredientData.supplier_id || null,
-        restaurant_id: DEFAULT_RESTAURANT_ID,
+        restaurantId: DEFAULT_RESTAURANT_ID,
       });
 
       if (error) throw error;
@@ -158,7 +159,7 @@ export function AddIngredientSheet({ onSuccess }: { onSuccess: () => void }) {
               onChange={handleChange}
             >
               <option value="">Selecione um fornecedor</option>
-              {suppliers?.map((supplier: any) => (
+              {suppliers?.map((supplier) => (
                 <option key={supplier.id} value={supplier.id}>
                   {supplier.name}
                 </option>

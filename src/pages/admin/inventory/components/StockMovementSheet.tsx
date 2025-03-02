@@ -49,7 +49,7 @@ export function StockMovementSheet({ ingredient, onSuccess }: StockMovementSheet
         type: movementData.type,
         quantity: movementQuantity,
         description: movementData.description,
-        restaurant_id: DEFAULT_RESTAURANT_ID,
+        restaurantId: DEFAULT_RESTAURANT_ID,
       });
 
       if (movementError) throw movementError;
@@ -61,7 +61,7 @@ export function StockMovementSheet({ ingredient, onSuccess }: StockMovementSheet
 
       if (updateError) throw updateError;
 
-      if (newQuantity <= ingredient.alert_threshold) {
+      if (newQuantity <= ingredient.alert_threshold!) {
         toast({
           title: "Alerta de Estoque",
           description: `O ingrediente ${ingredient.name} está com estoque baixo!`,

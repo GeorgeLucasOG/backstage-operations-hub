@@ -27,9 +27,9 @@ type CashRegister = {
   opened_at: string | null;
   closed_at: string | null;
   status: "OPEN" | "CLOSED";
-  restaurant_id: string;
-  created_at?: string;
-  updated_at?: string;
+  restaurantId: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type CashMovement = {
@@ -39,10 +39,10 @@ type CashMovement = {
   type: "IN" | "OUT";
   description: string;
   payment_method: string;
-  created_at: string;
-  order_id?: number;
-  restaurant_id: string;
-  updated_at?: string;
+  createdAt: string;
+  orderId?: number;
+  restaurantId: string;
+  updatedAt?: string;
 };
 
 const Cash = () => {
@@ -61,7 +61,7 @@ const Cash = () => {
       const { data, error } = await supabase
         .from("cash_registers")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("createdAt", { ascending: false });
 
       if (error) throw error;
       return data as CashRegister[];
@@ -78,8 +78,8 @@ const Cash = () => {
       const { data, error } = await supabase
         .from("cash_movements")
         .select("*")
-        .gte("created_at", today.toISOString())
-        .order("created_at", { ascending: false });
+        .gte("createdAt", today.toISOString())
+        .order("createdAt", { ascending: false });
 
       if (error) throw error;
       return data as CashMovement[];
@@ -98,7 +98,7 @@ const Cash = () => {
         current_amount: parseFloat(initialAmount),
         opened_at: new Date().toISOString(),
         status: "OPEN",
-        restaurant_id: DEFAULT_RESTAURANT_ID
+        restaurantId: DEFAULT_RESTAURANT_ID
       });
 
       if (error) throw error;
@@ -183,7 +183,7 @@ const Cash = () => {
         type,
         description,
         payment_method: paymentMethod,
-        restaurant_id: DEFAULT_RESTAURANT_ID
+        restaurantId: DEFAULT_RESTAURANT_ID
       });
 
       if (movementError) throw movementError;
@@ -367,7 +367,7 @@ const Cash = () => {
                 {movements?.map((movement) => (
                   <TableRow key={movement.id}>
                     <TableCell>
-                      {format(new Date(movement.created_at), "HH:mm")}
+                      {format(new Date(movement.createdAt), "HH:mm")}
                     </TableCell>
                     <TableCell>{movement.type === "IN" ? "Entrada" : "Saída"}</TableCell>
                     <TableCell>{movement.description}</TableCell>

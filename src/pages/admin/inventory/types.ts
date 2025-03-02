@@ -6,10 +6,10 @@ export interface Ingredient {
   min_quantity: number;
   unit: string;
   supplier_id: string | null;
-  alert_threshold: number;
-  restaurant_id: string;
-  created_at: string;
-  updated_at: string;
+  alert_threshold: number | null;
+  restaurantId: string;
+  createdAt: string;
+  updatedAt: string | null;
 }
 
 export interface Supplier {
@@ -20,7 +20,9 @@ export interface Supplier {
   phone: string | null;
   cnpj: string | null;
   address: string | null;
-  restaurant_id: string;
+  restaurantId: string;
+  createdAt?: string;
+  updatedAt?: string | null;
 }
 
 export interface StockMovement {
@@ -28,6 +30,8 @@ export interface StockMovement {
   ingredient_id: string;
   type: "IN" | "OUT";
   quantity: number;
-  description: string;
-  created_at: string;
+  description: string | null;
+  createdAt: string;
+  restaurantId: string;
+  updatedAt?: string | null;
 }

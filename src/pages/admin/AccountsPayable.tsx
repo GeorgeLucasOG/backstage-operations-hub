@@ -13,13 +13,13 @@ type AccountPayable = {
   description: string;
   pix_key: string | null;
   boleto_code: string | null;
-  created_at: string;
+  createdAt: string;
   due_date: string;
   paid_date: string | null;
-  restaurant_id: string;
+  restaurantId: string;
   amount: number;
   status: string;
-  updated_at: string;
+  updatedAt: string | null;
 };
 
 const AccountsPayable = () => {
@@ -36,7 +36,7 @@ const AccountsPayable = () => {
       const { data, error } = await supabase
         .from("accounts_payable")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("createdAt", { ascending: false });
 
       if (error) throw error;
       return data as AccountPayable[];
@@ -53,7 +53,7 @@ const AccountsPayable = () => {
         boleto_code: boletoCode || null,
         due_date: dueDate,
         amount: parseFloat(amount),
-        restaurant_id: DEFAULT_RESTAURANT_ID,
+        restaurantId: DEFAULT_RESTAURANT_ID,
         status: "PENDING"
       });
 
@@ -143,7 +143,7 @@ const AccountsPayable = () => {
                 <TableCell>{account.description}</TableCell>
                 <TableCell>{account.pix_key}</TableCell>
                 <TableCell>{account.boleto_code}</TableCell>
-                <TableCell>{new Date(account.created_at).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(account.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell>{new Date(account.due_date).toLocaleDateString()}</TableCell>
                 <TableCell>R$ {account.amount.toFixed(2)}</TableCell>
                 <TableCell>{account.status}</TableCell>

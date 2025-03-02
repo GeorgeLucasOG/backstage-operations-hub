@@ -39,7 +39,7 @@ export function AddSupplierSheet({ onSuccess }: { onSuccess: () => void }) {
         phone: supplierData.phone || null,
         cnpj: supplierData.cnpj || null,
         address: supplierData.address || null,
-        restaurant_id: DEFAULT_RESTAURANT_ID,
+        restaurantId: DEFAULT_RESTAURANT_ID,
       });
 
       if (error) throw error;
