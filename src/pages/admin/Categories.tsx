@@ -65,17 +65,74 @@ const CategoryForm = ({
   initialData?: Category | null;
   restaurants: Restaurant[];
 }) => {
-  const [formData, setFormData] = useState<CategoryFormData>(
-    initialData || {
-      name: "",
-      restaurantId: "",
+  console.log("Recebendo dados iniciais para o formulário:", initialData);
+
+  // Se não tiver restaurantId e houver restaurantes disponíveis, seleciona o primeiro
+  const getInitialFormData = () => {
+    if (initialData) {
+      console.log("Usando dados iniciais fornecidos:", initialData);
+      return {
+        name: initialData.name,
+        restaurantId: initialData.restaurantId,
+      };
+    } else if (restaurants && restaurants.length > 0) {
+      console.log(
+        "Criando novo formulário com primeiro restaurante selecionado"
+      );
+      return {
+        name: "",
+        restaurantId: restaurants[0].id, // Seleciona o primeiro restaurante por padrão
+      };
+    } else {
+      console.log("Criando formulário vazio");
+      return {
+        name: "",
+        restaurantId: "",
+      };
     }
+  };
+
+  const [formData, setFormData] = useState<CategoryFormData>(
+    getInitialFormData()
   );
+
+  // Verifica se há restaurantes disponíveis
+  const hasRestaurants = restaurants && restaurants.length > 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    console.log("Enviando formulário com dados:", formData);
+
+    // Validações adicionais antes de enviar
+    if (!formData.name.trim()) {
+      alert("O nome da categoria é obrigatório");
+      return;
+    }
+
+    if (!formData.restaurantId && hasRestaurants) {
+      alert("É necessário selecionar um restaurante");
+      return;
+    }
+
     onSubmit(formData);
   };
+
+  const handleSelectRestaurant = (value: string) => {
+    console.log("Restaurante selecionado:", value);
+    setFormData({ ...formData, restaurantId: value });
+  };
+
+  // Se não houver restaurantes, mostra uma mensagem
+  if (!hasRestaurants) {
+    return (
+      <div className="py-4 text-center">
+        <p className="text-red-500">
+          Não há restaurantes disponíveis. Crie um restaurante primeiro.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -97,9 +154,7 @@ const CategoryForm = ({
         </label>
         <Select
           value={formData.restaurantId}
-          onValueChange={(value) =>
-            setFormData({ ...formData, restaurantId: value })
-          }
+          onValueChange={handleSelectRestaurant}
           required
         >
           <SelectTrigger>
@@ -233,16 +288,44 @@ const Categories = () => {
     }: CategoryFormData & { id: string }) => {
       try {
         console.log("Atualizando categoria:", id, updateData);
+
+        // Validações básicas
+        if (!updateData.name || updateData.name.trim() === "") {
+          throw new Error("O nome da categoria é obrigatório");
+        }
+
+        if (!updateData.restaurantId) {
+          throw new Error("É necessário selecionar um restaurante");
+        }
+
+        // Adicionar o campo updatedAt
+        const updatedCategory = {
+          ...updateData,
+          updatedAt: new Date().toISOString(),
+        };
+
+        console.log("Payload de atualização:", updatedCategory);
+
         const { data, error } = await supabase
           .from("MenuCategory")
-          .update(updateData)
+          .update(updatedCategory)
           .eq("id", id)
-          .select()
-          .single();
+          .select();
 
-        if (error) throw error;
-        console.log("Categoria atualizada com sucesso:", data);
-        return data;
+        if (error) {
+          console.error(
+            "Erro detalhado do Supabase:",
+            JSON.stringify(error, null, 2)
+          );
+          throw new Error(`Erro ao atualizar categoria: ${error.message}`);
+        }
+
+        if (!data || data.length === 0) {
+          throw new Error("Categoria não encontrada ou não foi atualizada");
+        }
+
+        console.log("Categoria atualizada com sucesso:", data[0]);
+        return data[0];
       } catch (error) {
         console.error("Erro durante a atualização da categoria:", error);
         throw error;
@@ -383,7 +466,19 @@ const Categories = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setEditingCategory(category)}
+                            onClick={() => {
+                              console.log(
+                                "Categoria selecionada para edição:",
+                                category
+                              );
+                              setEditingCategory({
+                                id: category.id,
+                                name: category.name,
+                                restaurantId: category.restaurantId,
+                                createdAt: category.createdAt,
+                                updatedAt: category.updatedAt,
+                              });
+                            }}
                           >
                             Editar
                           </Button>
@@ -396,14 +491,35 @@ const Categories = () => {
                             {restaurants && editingCategory && (
                               <CategoryForm
                                 initialData={editingCategory}
-                                onSubmit={(data) =>
+                                onSubmit={(data) => {
+                                  console.log(
+                                    "Enviando dados de atualização:",
+                                    { ...data, id: editingCategory.id }
+                                  );
                                   updateMutation.mutate({
                                     ...data,
-                                    id: category.id,
-                                  })
-                                }
+                                    id: editingCategory.id,
+                                  });
+                                }}
                                 restaurants={restaurants}
                               />
+                            )}
+                            {updateMutation.isPending && (
+                              <div className="mt-4 text-center text-gray-600">
+                                <p>Atualizando categoria...</p>
+                              </div>
+                            )}
+                            {updateMutation.isError && (
+                              <div className="mt-4 p-2 bg-red-50 text-red-700 rounded border border-red-200">
+                                <p className="font-medium">
+                                  Erro ao atualizar categoria
+                                </p>
+                                <p className="text-sm">
+                                  {updateMutation.error instanceof Error
+                                    ? updateMutation.error.message
+                                    : "Erro desconhecido"}
+                                </p>
+                              </div>
                             )}
                           </div>
                         </SheetContent>
