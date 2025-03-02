@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,8 +10,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Plus, AlertCircle } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -23,33 +28,37 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface Category {
-  id: string;
-  name: string;
-  restaurant_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
 interface Restaurant {
   id: string;
   name: string;
 }
 
-interface CategoryFormData {
+interface Category {
+  id: string;
   name: string;
-  restaurant_id: string;
+  restaurantId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-const CategoryForm = ({ onSubmit, initialData = null, restaurants }: { 
-  onSubmit: (data: CategoryFormData) => void, 
-  initialData?: Category | null,
-  restaurants: Restaurant[]
+interface CategoryFormData {
+  name: string;
+  restaurantId: string;
+}
+
+const CategoryForm = ({
+  onSubmit,
+  initialData = null,
+  restaurants,
+}: {
+  onSubmit: (data: CategoryFormData) => void;
+  initialData?: Category | null;
+  restaurants: Restaurant[];
 }) => {
   const [formData, setFormData] = useState<CategoryFormData>(
     initialData || {
       name: "",
-      restaurant_id: "",
+      restaurantId: "",
     }
   );
 
@@ -60,8 +69,10 @@ const CategoryForm = ({ onSubmit, initialData = null, restaurants }: {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium mb-1">Nome</label>
+      <div className="space-y-2">
+        <label htmlFor="name" className="text-sm font-medium">
+          Nome da Categoria
+        </label>
         <Input
           id="name"
           value={formData.name}
@@ -69,11 +80,16 @@ const CategoryForm = ({ onSubmit, initialData = null, restaurants }: {
           required
         />
       </div>
-      <div>
-        <label htmlFor="restaurant" className="block text-sm font-medium mb-1">Restaurante</label>
+
+      <div className="space-y-2">
+        <label htmlFor="restaurant" className="text-sm font-medium">
+          Restaurante
+        </label>
         <Select
-          value={formData.restaurant_id}
-          onValueChange={(value) => setFormData({ ...formData, restaurant_id: value })}
+          value={formData.restaurantId}
+          onValueChange={(value) =>
+            setFormData({ ...formData, restaurantId: value })
+          }
           required
         >
           <SelectTrigger>
@@ -88,6 +104,7 @@ const CategoryForm = ({ onSubmit, initialData = null, restaurants }: {
           </SelectContent>
         </Select>
       </div>
+
       <Button type="submit" className="w-full">
         {initialData ? "Atualizar" : "Criar"} Categoria
       </Button>
@@ -100,37 +117,72 @@ const Categories = () => {
   const queryClient = useQueryClient();
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
-  const { data: categories, isLoading: isLoadingCategories } = useQuery({
+  const {
+    data: categories,
+    isLoading: isLoadingCategories,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("menu_categories")
-        .select("*, Restaurant:restaurant_id(name)")
-        .order("created_at", { ascending: false });
+      console.log("Buscando categorias do banco de dados...");
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from("MenuCategory")
+        .select("*, Restaurant:restaurantId(name)")
+        .order("createdAt", { ascending: false });
+
+      if (error) {
+        console.error("Erro ao buscar categorias:", error);
+        throw error;
+      }
+
+      console.log("Categorias encontradas:", data);
+      if (data && data.length > 0) {
+        console.log(
+          "Detalhes da primeira categoria:",
+          JSON.stringify(data[0], null, 2)
+        );
+        console.log("Restaurante vinculado:", data[0].Restaurant);
+      }
+
       return data as (Category & { Restaurant: { name: string } })[];
     },
   });
 
-  const { data: restaurants } = useQuery({
+  const { data: restaurants, isLoading: isLoadingRestaurants } = useQuery({
     queryKey: ["restaurants"],
     queryFn: async () => {
+      console.log("Buscando restaurantes do banco de dados...");
+
       const { data, error } = await supabase
         .from("Restaurant")
         .select("id, name")
         .order("name");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao buscar restaurantes:", error);
+        throw error;
+      }
+
+      console.log("Restaurantes encontrados:", data);
       return data as Restaurant[];
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (newCategory: CategoryFormData) => {
+      const now = new Date().toISOString();
+      const completeCategory = {
+        ...newCategory,
+        id: crypto.randomUUID(),
+        createdAt: now,
+        updatedAt: now,
+      };
+
       const { data, error } = await supabase
-        .from("menu_categories")
-        .insert([newCategory])
+        .from("MenuCategory")
+        .insert([completeCategory])
         .select()
         .single();
 
@@ -145,6 +197,7 @@ const Categories = () => {
       });
     },
     onError: (error) => {
+      console.error("Erro ao criar categoria:", error);
       toast({
         title: "Erro",
         description: "Erro ao criar categoria: " + error.message,
@@ -154,9 +207,12 @@ const Categories = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, ...updateData }: CategoryFormData & { id: string }) => {
+    mutationFn: async ({
+      id,
+      ...updateData
+    }: CategoryFormData & { id: string }) => {
       const { data, error } = await supabase
-        .from("menu_categories")
+        .from("MenuCategory")
         .update(updateData)
         .eq("id", id)
         .select()
@@ -174,6 +230,7 @@ const Categories = () => {
       });
     },
     onError: (error) => {
+      console.error("Erro ao atualizar categoria:", error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar categoria: " + error.message,
@@ -185,7 +242,7 @@ const Categories = () => {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("menu_categories")
+        .from("MenuCategory")
         .delete()
         .eq("id", id);
 
@@ -199,6 +256,7 @@ const Categories = () => {
       });
     },
     onError: (error) => {
+      console.error("Erro ao excluir categoria:", error);
       toast({
         title: "Erro",
         description: "Erro ao excluir categoria: " + error.message,
@@ -230,7 +288,7 @@ const Categories = () => {
             </SheetHeader>
             <div className="mt-4">
               {restaurants && (
-                <CategoryForm 
+                <CategoryForm
                   onSubmit={(data) => createMutation.mutate(data)}
                   restaurants={restaurants}
                 />
@@ -240,8 +298,22 @@ const Categories = () => {
         </Sheet>
       </div>
 
-      {isLoadingCategories ? (
-        <div>Carregando...</div>
+      {isLoadingCategories || isLoadingRestaurants ? (
+        <div className="py-8 text-center">Carregando...</div>
+      ) : isError ? (
+        <div className="py-8 rounded-lg border-red-200 border p-4 bg-red-50 text-red-700 flex items-center">
+          <AlertCircle className="h-5 w-5 mr-2" />
+          <div>
+            <p className="font-medium">Erro ao carregar categorias</p>
+            <p className="text-sm">
+              {error instanceof Error ? error.message : "Erro desconhecido"}
+            </p>
+          </div>
+        </div>
+      ) : categories && categories.length === 0 ? (
+        <div className="py-8 text-center text-gray-500">
+          Nenhuma categoria encontrada. Crie uma nova categoria para começar.
+        </div>
       ) : (
         <div className="border rounded-lg">
           <Table>
@@ -256,7 +328,14 @@ const Categories = () => {
               {categories?.map((category) => (
                 <TableRow key={category.id}>
                   <TableCell>{category.name}</TableCell>
-                  <TableCell>{category.Restaurant.name}</TableCell>
+                  <TableCell>
+                    {category.Restaurant?.name || "Sem restaurante"}
+                    {/*!category.Restaurant?.name && (
+                      <span className="text-xs text-red-500 block">
+                        (ID: {category.restaurantId || "não definido"})
+                      </span>
+                    )*/}
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Sheet>
@@ -278,7 +357,10 @@ const Categories = () => {
                               <CategoryForm
                                 initialData={editingCategory}
                                 onSubmit={(data) =>
-                                  updateMutation.mutate({ ...data, id: category.id })
+                                  updateMutation.mutate({
+                                    ...data,
+                                    id: category.id,
+                                  })
                                 }
                                 restaurants={restaurants}
                               />
