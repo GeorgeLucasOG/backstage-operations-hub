@@ -21,18 +21,18 @@ interface Restaurant {
   name: string;
   description: string;
   slug: string;
-  avatar_image_url: string;
-  cover_image_url: string;
-  created_at: string;
-  updated_at: string;
+  avatarImageUrl: string;
+  coverImageUrl: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface RestaurantFormData {
   name: string;
   description: string;
   slug: string;
-  avatar_image_url: string;
-  cover_image_url: string;
+  avatarImageUrl: string;
+  coverImageUrl: string;
 }
 
 const RestaurantForm = ({ onSubmit, initialData = null }: { onSubmit: (data: RestaurantFormData) => void, initialData?: Restaurant | null }) => {
@@ -41,8 +41,8 @@ const RestaurantForm = ({ onSubmit, initialData = null }: { onSubmit: (data: Res
       name: "",
       description: "",
       slug: "",
-      avatar_image_url: "",
-      cover_image_url: "",
+      avatarImageUrl: "",
+      coverImageUrl: "",
     }
   );
 
@@ -81,20 +81,20 @@ const RestaurantForm = ({ onSubmit, initialData = null }: { onSubmit: (data: Res
         />
       </div>
       <div>
-        <label htmlFor="avatar_image_url" className="block text-sm font-medium mb-1">URL do Avatar</label>
+        <label htmlFor="avatarImageUrl" className="block text-sm font-medium mb-1">URL do Avatar</label>
         <Input
-          id="avatar_image_url"
-          value={formData.avatar_image_url}
-          onChange={(e) => setFormData({ ...formData, avatar_image_url: e.target.value })}
+          id="avatarImageUrl"
+          value={formData.avatarImageUrl}
+          onChange={(e) => setFormData({ ...formData, avatarImageUrl: e.target.value })}
           required
         />
       </div>
       <div>
-        <label htmlFor="cover_image_url" className="block text-sm font-medium mb-1">URL da Capa</label>
+        <label htmlFor="coverImageUrl" className="block text-sm font-medium mb-1">URL da Capa</label>
         <Input
-          id="cover_image_url"
-          value={formData.cover_image_url}
-          onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
+          id="coverImageUrl"
+          value={formData.coverImageUrl}
+          onChange={(e) => setFormData({ ...formData, coverImageUrl: e.target.value })}
           required
         />
       </div>
@@ -115,9 +115,9 @@ const Restaurant = () => {
     queryFn: async () => {
       console.log("Iniciando busca de restaurantes...");
       const { data, error } = await supabase
-        .from("restaurants")
+        .from("Restaurant") // Aqui corrigimos o nome da tabela para "Restaurant" (com R maiúsculo)
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("createdAt", { ascending: false });
 
       if (error) {
         console.error("Erro ao buscar restaurantes:", error);
@@ -139,7 +139,7 @@ const Restaurant = () => {
       console.log("Iniciando criação do restaurante:", newRestaurant);
       
       const { data, error } = await supabase
-        .from("restaurants")
+        .from("Restaurant") // Aqui corrigimos o nome da tabela para "Restaurant" (com R maiúsculo)
         .insert([newRestaurant])
         .select();
 
@@ -173,7 +173,7 @@ const Restaurant = () => {
       console.log("Iniciando atualização do restaurante:", id, updateData);
       
       const { data, error } = await supabase
-        .from("restaurants")
+        .from("Restaurant") // Aqui corrigimos o nome da tabela para "Restaurant" (com R maiúsculo)
         .update(updateData)
         .eq("id", id)
         .select();
@@ -209,7 +209,7 @@ const Restaurant = () => {
       console.log("Iniciando exclusão do restaurante:", id);
       
       const { error } = await supabase
-        .from("restaurants")
+        .from("Restaurant") // Aqui corrigimos o nome da tabela para "Restaurant" (com R maiúsculo)
         .delete()
         .eq("id", id);
 
@@ -285,7 +285,7 @@ const Restaurant = () => {
                   <TableRow key={restaurant.id}>
                     <TableCell>
                       <img
-                        src={restaurant.avatar_image_url}
+                        src={restaurant.avatarImageUrl}
                         alt={restaurant.name}
                         className="h-12 w-12 object-cover rounded"
                       />
