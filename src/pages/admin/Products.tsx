@@ -1,7 +1,9 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
+import {
+  supabase,
+  DEFAULT_RESTAURANT_ID,
+} from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -50,7 +52,11 @@ const Products = () => {
   });
 
   // Consulta principal de produtos
-  const { data: products, isLoading, refetch } = useQuery({
+  const {
+    data: products,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
       // Consultar produtos
@@ -74,33 +80,40 @@ const Products = () => {
     queryKey: ["categories"],
     queryFn: async () => {
       // Consultar categorias
+      console.log(
+        "Consultando categorias do banco de dados na página de Products..."
+      );
       const { data, error } = await supabase
-        .from("MenuCategory") // Corrigindo para o nome correto da tabela
-        .select("*");
+        .from("MenuCategory") // Nome correto da tabela em PascalCase
+        .select("*, Restaurant:restaurantId(name)"); // Adicionando a relação com Restaurant
 
       if (error) {
         console.error("Erro ao consultar categorias:", error);
         return [];
       }
 
-      console.log("Categorias obtidas:", data);
+      console.log("Categorias obtidas na página de Products:", data);
       return data || [];
     },
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
     setNewProduct((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       // Gerando um ID único para o novo produto
       const id = crypto.randomUUID();
       const now = new Date().toISOString();
-      
+
       // Preparando o objeto produto
       const productPayload = {
         id,
@@ -112,7 +125,7 @@ const Products = () => {
         restaurantId: DEFAULT_RESTAURANT_ID, // Corrigindo para o nome da coluna no banco
         ingredients: [],
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       };
 
       // Inserir na tabela 'Product'
@@ -129,7 +142,7 @@ const Products = () => {
         title: "Produto adicionado",
         description: "O produto foi adicionado com sucesso",
       });
-      
+
       setIsOpen(false);
       setNewProduct({
         name: "",
@@ -138,7 +151,7 @@ const Products = () => {
         image_url: "",
         category_id: "",
       });
-      
+
       refetch(); // Atualiza a lista de produtos
     } catch (error) {
       console.error("Erro ao adicionar produto:", error);
@@ -231,14 +244,23 @@ const Products = () => {
                   name="category_id"
                   className="w-full p-2 border rounded"
                   value={newProduct.category_id}
-                  onChange={(e) => handleInputChange(e as any)}
+                  onChange={(e) => handleInputChange(e)}
                 >
                   <option value="">Selecione uma categoria</option>
-                  {categories?.map((category: any) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
+                  {categories?.map(
+                    (category: {
+                      id: string;
+                      name: string;
+                      Restaurant?: { name: string };
+                    }) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}{" "}
+                        {category.Restaurant
+                          ? `(${category.Restaurant.name})`
+                          : ""}
+                      </option>
+                    )
+                  )}
                 </select>
               </div>
               <div className="flex justify-end space-x-2 pt-4">
@@ -285,9 +307,7 @@ const Products = () => {
                     <TableCell className="max-w-xs truncate">
                       {product.description}
                     </TableCell>
-                    <TableCell>
-                      {formatPrice(product.price)}
-                    </TableCell>
+                    <TableCell>{formatPrice(product.price)}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm">
