@@ -27,6 +27,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 
+// Função para gerar UUID v4
+function generateUUID() {
+  // Implementação simples de UUID v4
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 interface Product {
   id: string;
   name: string;
@@ -111,7 +121,7 @@ const Products = () => {
 
     try {
       // Gerando um ID único para o novo produto
-      const id = crypto.randomUUID();
+      const id = generateUUID(); // Usando nossa função personalizada
       const now = new Date().toISOString();
 
       // Preparando o objeto produto
