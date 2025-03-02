@@ -53,12 +53,34 @@ interface Product {
 const Products = () => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: "",
     description: "",
     price: "",
     image_url: "",
     category_id: "",
+  });
+
+  // Consultando restaurantes disponíveis para obter IDs válidos
+  const { data: restaurantsData } = useQuery({
+    queryKey: ["restaurants"],
+    queryFn: async () => {
+      console.log("Consultando restaurantes disponíveis...");
+
+      const { data, error } = await supabase
+        .from("Restaurant")
+        .select("id, name")
+        .limit(10);
+
+      if (error) {
+        console.error("Erro ao consultar restaurantes:", error);
+        return [];
+      }
+
+      console.log("Restaurantes disponíveis:", data);
+      return data || [];
+    },
   });
 
   // Consulta principal de produtos
@@ -118,35 +140,143 @@ const Products = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
+      console.log("Iniciando adição de produto com dados:", newProduct);
+
+      // Validações básicas
+      if (!newProduct.name.trim()) {
+        throw new Error("O nome do produto é obrigatório");
+      }
+
+      if (!newProduct.price || isNaN(parseFloat(newProduct.price))) {
+        throw new Error("O preço deve ser um número válido");
+      }
+
+      // Verificar se temos restaurantes disponíveis
+      if (!restaurantsData || restaurantsData.length === 0) {
+        throw new Error(
+          "Não há restaurantes disponíveis. Crie um restaurante primeiro."
+        );
+      }
+
+      // Obter o ID do primeiro restaurante disponível ou usar o restaurante selecionado na categoria
+      let validRestaurantId = restaurantsData[0]?.id;
+
+      // Se uma categoria foi selecionada e ela tem um restaurante associado, tente usar esse restaurante
+      if (newProduct.category_id && categories) {
+        const selectedCategory = categories.find(
+          (cat: { id: string; restaurantId?: string }) =>
+            cat.id === newProduct.category_id
+        );
+        if (selectedCategory && selectedCategory.restaurantId) {
+          console.log(
+            "Usando restaurante da categoria selecionada:",
+            selectedCategory.restaurantId
+          );
+          validRestaurantId = selectedCategory.restaurantId;
+        }
+      }
+
+      if (!validRestaurantId) {
+        throw new Error(
+          "Não foi possível determinar um restaurante válido para este produto."
+        );
+      }
+
+      console.log("Usando ID de restaurante válido:", validRestaurantId);
+
       // Gerando um ID único para o novo produto
       const id = generateUUID(); // Usando nossa função personalizada
       const now = new Date().toISOString();
 
-      // Preparando o objeto produto
-      const productPayload = {
+      // Tratamento seguro para nulos e strings vazias
+      const name = newProduct.name.trim();
+      const description = newProduct.description?.trim() || "";
+      const price = parseFloat(newProduct.price) || 0;
+      const imageUrl =
+        newProduct.image_url?.trim() || "https://via.placeholder.com/150";
+      const menuCategoryId = newProduct.category_id || null;
+
+      // Verificar estrutura da tabela no banco (apenas para debug)
+      console.log("Verificando estrutura da tabela Product...");
+      const { data: tableInfo, error: tableError } = await supabase
+        .from("Product")
+        .select("*")
+        .limit(1);
+
+      // Preparar o payload com base no exemplo do banco, se disponível
+      let productPayload = {
         id,
-        name: newProduct.name,
-        description: newProduct.description,
-        price: parseFloat(newProduct.price),
-        imageUrl: newProduct.image_url || "https://via.placeholder.com/150", // Corrigindo para o nome da coluna no banco
-        menuCategoryId: newProduct.category_id || null, // Corrigindo para o nome da coluna no banco
-        restaurantId: DEFAULT_RESTAURANT_ID, // Corrigindo para o nome da coluna no banco
-        ingredients: [],
+        name,
+        description,
+        price,
+        imageUrl,
+        menuCategoryId,
+        restaurantId: validRestaurantId, // Usando o ID de restaurante válido
         createdAt: now,
         updatedAt: now,
-      };
+      } as Product;
 
-      // Inserir na tabela 'Product'
+      // Incluir ingredients apenas se existir na estrutura da tabela
+      if (tableInfo && tableInfo.length > 0) {
+        const firstRecord = tableInfo[0];
+        console.log("Campos detectados no banco:", Object.keys(firstRecord));
+
+        if ("ingredients" in firstRecord) {
+          console.log("Campo ingredients detectado, adicionando ao payload");
+          productPayload = {
+            ...productPayload,
+            ingredients: null,
+          } as Product; // Forçando o tipo para Product que inclui ingredients
+        }
+      }
+
+      console.log(
+        "Enviando produto para o banco:",
+        JSON.stringify(productPayload, null, 2)
+      );
+
+      // Tentativa de inserção
       const { data, error } = await supabase
-        .from("Product") // Corrigindo o nome da tabela para "Product" (com P maiúsculo)
+        .from("Product")
         .insert([productPayload])
         .select();
 
       if (error) {
-        throw error;
+        console.error(
+          "Erro detalhado do Supabase:",
+          JSON.stringify(error, null, 2)
+        );
+
+        // Analisar o erro para determinar se é um problema de formato de dados
+        const errorMessage = error.message || "";
+        const errorDetails = error.details || "";
+        const errorCode = error.code || "";
+
+        // Log detalhado para diagnóstico
+        console.log(
+          `Análise do erro: Código=${errorCode}, Mensagem=${errorMessage}, Detalhes=${errorDetails}`
+        );
+
+        // Tentar uma abordagem alternativa se parecer ser um problema de formato
+        if (
+          errorCode === "23502" ||
+          errorMessage.includes("violates") ||
+          errorMessage.includes("constraint")
+        ) {
+          throw new Error(
+            `Erro na validação de dados: ${errorMessage}. Verifique se todos os campos obrigatórios estão preenchidos corretamente.`
+          );
+        }
+
+        throw new Error(
+          `Erro ao inserir produto: ${errorMessage} (Código: ${errorCode})`
+        );
       }
+
+      console.log("Produto adicionado com sucesso:", data);
 
       toast({
         title: "Produto adicionado",
@@ -167,9 +297,14 @@ const Products = () => {
       console.error("Erro ao adicionar produto:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível adicionar o produto",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível adicionar o produto",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -278,10 +413,13 @@ const Products = () => {
                   type="button"
                   variant="outline"
                   onClick={() => setIsOpen(false)}
+                  disabled={isSubmitting}
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">Salvar</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Salvando..." : "Salvar"}
+                </Button>
               </div>
             </form>
           </DialogContent>
