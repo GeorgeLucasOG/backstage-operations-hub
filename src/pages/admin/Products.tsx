@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   supabase,
   DEFAULT_RESTAURANT_ID,
@@ -52,8 +52,11 @@ interface Product {
 
 const Products = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState({
     name: "",
     description: "",
@@ -126,6 +129,91 @@ const Products = () => {
 
       console.log("Categorias obtidas na página de Products:", data);
       return data || [];
+    },
+  });
+
+  // Mutação para atualizar um produto
+  const updateMutation = useMutation({
+    mutationFn: async (updatedProduct: {
+      id: string;
+      name: string;
+      description: string;
+      price: number;
+      imageUrl: string;
+      menuCategoryId: string | null;
+    }) => {
+      console.log("Iniciando atualização do produto:", updatedProduct);
+
+      const { data, error } = await supabase
+        .from("Product")
+        .update({
+          name: updatedProduct.name,
+          description: updatedProduct.description,
+          price: updatedProduct.price,
+          imageUrl: updatedProduct.imageUrl,
+          menuCategoryId: updatedProduct.menuCategoryId,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq("id", updatedProduct.id)
+        .select();
+
+      if (error) {
+        console.error("Erro ao atualizar produto:", error);
+        throw new Error(`Erro ao atualizar produto: ${error.message}`);
+      }
+
+      console.log("Produto atualizado com sucesso:", data);
+      return data[0];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      setIsEditOpen(false);
+      setEditingProduct(null);
+      toast({
+        title: "Sucesso",
+        description: "Produto atualizado com sucesso!",
+      });
+    },
+    onError: (error) => {
+      console.error("Erro na atualização:", error);
+      toast({
+        title: "Erro",
+        description:
+          error instanceof Error ? error.message : "Erro ao atualizar produto",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutação para excluir um produto
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      console.log("Iniciando exclusão do produto:", id);
+
+      const { error } = await supabase.from("Product").delete().eq("id", id);
+
+      if (error) {
+        console.error("Erro ao excluir produto:", error);
+        throw new Error(`Erro ao excluir produto: ${error.message}`);
+      }
+
+      console.log("Produto excluído com sucesso");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast({
+        title: "Sucesso",
+        description: "Produto excluído com sucesso!",
+      });
+    },
+    onError: (error) => {
+      console.error("Erro na exclusão:", error);
+      toast({
+        title: "Erro",
+        description:
+          error instanceof Error ? error.message : "Erro ao excluir produto",
+        variant: "destructive",
+      });
     },
   });
 
@@ -321,6 +409,84 @@ const Products = () => {
     }).format(price);
   };
 
+  // Função para lidar com a edição de um produto
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    setIsEditOpen(true);
+  };
+
+  // Função para lidar com a exclusão de um produto
+  const handleDelete = (id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir este produto?")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  // Função para lidar com a submissão do formulário de edição
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!editingProduct) return;
+
+    setIsSubmitting(true);
+
+    try {
+      // Validações básicas
+      if (!editingProduct.name.trim()) {
+        throw new Error("O nome do produto é obrigatório");
+      }
+
+      if (isNaN(editingProduct.price) || editingProduct.price <= 0) {
+        throw new Error("O preço deve ser um número válido maior que zero");
+      }
+
+      // Atualizar o produto
+      updateMutation.mutate({
+        id: editingProduct.id,
+        name: editingProduct.name,
+        description: editingProduct.description,
+        price: editingProduct.price,
+        imageUrl: editingProduct.imageUrl || "https://via.placeholder.com/150",
+        menuCategoryId: editingProduct.menuCategoryId,
+      });
+    } catch (error) {
+      console.error("Erro ao processar edição:", error);
+      toast({
+        title: "Erro",
+        description:
+          error instanceof Error ? error.message : "Erro ao atualizar produto",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Atualizar valores do formulário de edição
+  const handleEditInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
+
+    if (!editingProduct) return;
+
+    setEditingProduct((prev) => {
+      if (!prev) return prev;
+
+      if (name === "price") {
+        return { ...prev, [name]: parseFloat(value) || 0 };
+      } else if (name === "category_id") {
+        return { ...prev, menuCategoryId: value || null };
+      } else if (name === "image_url") {
+        return { ...prev, imageUrl: value };
+      } else {
+        return { ...prev, [name]: value };
+      }
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -426,6 +592,103 @@ const Products = () => {
         </Dialog>
       </div>
 
+      {/* Dialog for editing product */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Produto</DialogTitle>
+            <DialogDescription>
+              Edite os campos para atualizar o produto.
+            </DialogDescription>
+          </DialogHeader>
+          {editingProduct && (
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Nome</Label>
+                <Input
+                  id="edit-name"
+                  name="name"
+                  value={editingProduct.name}
+                  onChange={handleEditInputChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Descrição</Label>
+                <Textarea
+                  id="edit-description"
+                  name="description"
+                  value={editingProduct.description}
+                  onChange={handleEditInputChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-price">Preço (R$)</Label>
+                <Input
+                  id="edit-price"
+                  name="price"
+                  type="number"
+                  step="0.01"
+                  value={editingProduct.price}
+                  onChange={handleEditInputChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-image_url">URL da Imagem</Label>
+                <Input
+                  id="edit-image_url"
+                  name="image_url"
+                  value={editingProduct.imageUrl}
+                  onChange={handleEditInputChange}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-category_id">Categoria</Label>
+                <select
+                  id="edit-category_id"
+                  name="category_id"
+                  className="w-full p-2 border rounded"
+                  value={editingProduct.menuCategoryId || ""}
+                  onChange={handleEditInputChange}
+                >
+                  <option value="">Selecione uma categoria</option>
+                  {categories?.map(
+                    (category: {
+                      id: string;
+                      name: string;
+                      Restaurant?: { name: string };
+                    }) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}{" "}
+                        {category.Restaurant
+                          ? `(${category.Restaurant.name})`
+                          : ""}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {isLoading ? (
         <div>Carregando...</div>
       ) : (
@@ -458,10 +721,18 @@ const Products = () => {
                     <TableCell>{formatPrice(product.price)}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(product)}
+                        >
                           Editar
                         </Button>
-                        <Button variant="destructive" size="sm">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(product.id)}
+                        >
                           Excluir
                         </Button>
                       </div>
