@@ -1,10 +1,6 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  supabase,
-  DEFAULT_RESTAURANT_ID,
-} from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -14,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,9 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 
-// Função para gerar UUID v4
 function generateUUID() {
-  // Implementação simples de UUID v4
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
     const r = (Math.random() * 16) | 0;
     const v = c === "x" ? r : (r & 0x3) | 0x8;
@@ -43,10 +37,10 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  imageUrl: string; // Changing to match the actual column name in database
-  menuCategoryId: string | null; // Changing to match the actual column name
-  restaurantId: string; // Changing to match the actual column name
-  ingredients: string[] | null;
+  imageUrl: string;
+  menuCategoryId: string | null;
+  restaurantId: string;
+  ingredients: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -64,9 +58,10 @@ const Products = () => {
     price: "",
     image_url: "",
     category_id: "",
+    ingredients: [] as string[],
   });
+  const [newIngredient, setNewIngredient] = useState("");
 
-  // Consultando restaurantes disponíveis para obter IDs válidos
   const { data: restaurantsData } = useQuery({
     queryKey: ["restaurants"],
     queryFn: async () => {
@@ -87,7 +82,6 @@ const Products = () => {
     },
   });
 
-  // Consulta principal de produtos
   const {
     data: products,
     isLoading,
@@ -95,9 +89,8 @@ const Products = () => {
   } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      // Consultar produtos
       const { data, error } = await supabase
-        .from("Product") // Corrigindo o nome da tabela para "Product" (com P maiúsculo)
+        .from("Product")
         .select("*")
         .order("createdAt", { ascending: false });
 
@@ -111,17 +104,15 @@ const Products = () => {
     },
   });
 
-  // Consulta de categorias
   const { data: categories } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
-      // Consultar categorias
       console.log(
         "Consultando categorias do banco de dados na página de Products..."
       );
       const { data, error } = await supabase
-        .from("MenuCategory") // Nome correto da tabela em PascalCase
-        .select("*, Restaurant:restaurantId(name)"); // Adicionando a relação com Restaurant
+        .from("MenuCategory")
+        .select("*, Restaurant:restaurantId(name)");
 
       if (error) {
         console.error("Erro ao consultar categorias:", error);
@@ -133,7 +124,6 @@ const Products = () => {
     },
   });
 
-  // Mutação para atualizar um produto
   const updateMutation = useMutation({
     mutationFn: async (updatedProduct: {
       id: string;
@@ -186,7 +176,6 @@ const Products = () => {
     },
   });
 
-  // Mutação para excluir um produto
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       console.log("Iniciando exclusão do produto:", id);
@@ -227,6 +216,41 @@ const Products = () => {
     setNewProduct((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleAddIngredient = () => {
+    if (!newIngredient.trim()) return;
+    
+    if (isEditOpen && editingProduct) {
+      setEditingProduct({
+        ...editingProduct,
+        ingredients: [...(editingProduct.ingredients || []), newIngredient.trim()],
+      });
+    } else {
+      setNewProduct({
+        ...newProduct,
+        ingredients: [...newProduct.ingredients, newIngredient.trim()],
+      });
+    }
+    setNewIngredient("");
+  };
+
+  const handleRemoveIngredient = (index: number) => {
+    if (isEditOpen && editingProduct) {
+      const updatedIngredients = [...(editingProduct.ingredients || [])];
+      updatedIngredients.splice(index, 1);
+      setEditingProduct({
+        ...editingProduct,
+        ingredients: updatedIngredients,
+      });
+    } else {
+      const updatedIngredients = [...newProduct.ingredients];
+      updatedIngredients.splice(index, 1);
+      setNewProduct({
+        ...newProduct,
+        ingredients: updatedIngredients,
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -234,7 +258,6 @@ const Products = () => {
     try {
       console.log("Iniciando adição de produto com dados:", newProduct);
 
-      // Validações básicas
       if (!newProduct.name.trim()) {
         throw new Error("O nome do produto é obrigatório");
       }
@@ -243,17 +266,14 @@ const Products = () => {
         throw new Error("O preço deve ser um número válido");
       }
 
-      // Verificar se temos restaurantes disponíveis
       if (!restaurantsData || restaurantsData.length === 0) {
         throw new Error(
           "Não há restaurantes disponíveis. Crie um restaurante primeiro."
         );
       }
 
-      // Obter o ID do primeiro restaurante disponível ou usar o restaurante selecionado na categoria
       let validRestaurantId = restaurantsData[0]?.id;
 
-      // Se uma categoria foi selecionada e ela tem um restaurante associado, tente usar esse restaurante
       if (newProduct.category_id && categories) {
         const selectedCategory = categories.find(
           (cat: { id: string; restaurantId?: string }) =>
@@ -274,98 +294,28 @@ const Products = () => {
         );
       }
 
-      console.log("Usando ID de restaurante válido:", validRestaurantId);
-
-      // Gerando um ID único para o novo produto
-      const id = generateUUID(); // Usando nossa função personalizada
+      const id = generateUUID();
       const now = new Date().toISOString();
 
-      // Tratamento seguro para nulos e strings vazias
-      const name = newProduct.name.trim();
-      const description = newProduct.description?.trim() || "";
-      const price = parseFloat(newProduct.price) || 0;
-      const imageUrl =
-        newProduct.image_url?.trim() || "https://via.placeholder.com/150";
-      const menuCategoryId = newProduct.category_id || null;
-
-      // Verificar estrutura da tabela no banco (apenas para debug)
-      console.log("Verificando estrutura da tabela Product...");
-      const { data: tableInfo, error: tableError } = await supabase
-        .from("Product")
-        .select("*")
-        .limit(1);
-
-      // Preparar o payload com base no exemplo do banco, se disponível
-      let productPayload = {
+      const productPayload = {
         id,
-        name,
-        description,
-        price,
-        imageUrl,
-        menuCategoryId,
-        restaurantId: validRestaurantId, // Usando o ID de restaurante válido
+        name: newProduct.name.trim(),
+        description: newProduct.description?.trim() || "",
+        price: parseFloat(newProduct.price) || 0,
+        imageUrl: newProduct.image_url?.trim() || "https://via.placeholder.com/150",
+        menuCategoryId: newProduct.category_id || null,
+        restaurantId: validRestaurantId,
+        ingredients: newProduct.ingredients,
         createdAt: now,
         updatedAt: now,
-      } as Product;
+      };
 
-      // Incluir ingredients apenas se existir na estrutura da tabela
-      if (tableInfo && tableInfo.length > 0) {
-        const firstRecord = tableInfo[0];
-        console.log("Campos detectados no banco:", Object.keys(firstRecord));
-
-        if ("ingredients" in firstRecord) {
-          console.log("Campo ingredients detectado, adicionando ao payload");
-          productPayload = {
-            ...productPayload,
-            ingredients: null,
-          } as Product; // Forçando o tipo para Product que inclui ingredients
-        }
-      }
-
-      console.log(
-        "Enviando produto para o banco:",
-        JSON.stringify(productPayload, null, 2)
-      );
-
-      // Tentativa de inserção
       const { data, error } = await supabase
         .from("Product")
         .insert([productPayload])
         .select();
 
-      if (error) {
-        console.error(
-          "Erro detalhado do Supabase:",
-          JSON.stringify(error, null, 2)
-        );
-
-        // Analisar o erro para determinar se é um problema de formato de dados
-        const errorMessage = error.message || "";
-        const errorDetails = error.details || "";
-        const errorCode = error.code || "";
-
-        // Log detalhado para diagnóstico
-        console.log(
-          `Análise do erro: Código=${errorCode}, Mensagem=${errorMessage}, Detalhes=${errorDetails}`
-        );
-
-        // Tentar uma abordagem alternativa se parecer ser um problema de formato
-        if (
-          errorCode === "23502" ||
-          errorMessage.includes("violates") ||
-          errorMessage.includes("constraint")
-        ) {
-          throw new Error(
-            `Erro na validação de dados: ${errorMessage}. Verifique se todos os campos obrigatórios estão preenchidos corretamente.`
-          );
-        }
-
-        throw new Error(
-          `Erro ao inserir produto: ${errorMessage} (Código: ${errorCode})`
-        );
-      }
-
-      console.log("Produto adicionado com sucesso:", data);
+      if (error) throw error;
 
       toast({
         title: "Produto adicionado",
@@ -379,9 +329,10 @@ const Products = () => {
         price: "",
         image_url: "",
         category_id: "",
+        ingredients: [],
       });
 
-      refetch(); // Atualiza a lista de produtos
+      refetch();
     } catch (error) {
       console.error("Erro ao adicionar produto:", error);
       toast({
@@ -397,12 +348,10 @@ const Products = () => {
     }
   };
 
-  // Função auxiliar para obter URL da imagem
   const getImageUrl = (product: Product): string => {
-    return product.imageUrl || "https://via.placeholder.com/150"; // Atualizado para o nome correto da propriedade
+    return product.imageUrl || "https://via.placeholder.com/150";
   };
 
-  // Função auxiliar para obter o preço formatado
   const formatPrice = (price: number): string => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -410,20 +359,17 @@ const Products = () => {
     }).format(price);
   };
 
-  // Função para lidar com a edição de um produto
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
     setIsEditOpen(true);
   };
 
-  // Função para lidar com a exclusão de um produto
   const handleDelete = (id: string) => {
     if (window.confirm("Tem certeza que deseja excluir este produto?")) {
       deleteMutation.mutate(id);
     }
   };
 
-  // Função para lidar com a submissão do formulário de edição
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -432,7 +378,6 @@ const Products = () => {
     setIsSubmitting(true);
 
     try {
-      // Validações básicas
       if (!editingProduct.name.trim()) {
         throw new Error("O nome do produto é obrigatório");
       }
@@ -441,7 +386,6 @@ const Products = () => {
         throw new Error("O preço deve ser um número válido maior que zero");
       }
 
-      // Atualizar o produto
       updateMutation.mutate({
         id: editingProduct.id,
         name: editingProduct.name,
@@ -463,7 +407,6 @@ const Products = () => {
     }
   };
 
-  // Atualizar valores do formulário de edição
   const handleEditInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -575,6 +518,40 @@ const Products = () => {
                   )}
                 </select>
               </div>
+              <div className="space-y-2">
+                <Label>Ingredientes</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newIngredient}
+                    onChange={(e) => setNewIngredient(e.target.value)}
+                    placeholder="Digite um ingrediente"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddIngredient}
+                    variant="outline"
+                  >
+                    Adicionar
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {newProduct.ingredients.map((ingredient, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      <span>{ingredient}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveIngredient(index)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div className="flex justify-end space-x-2 pt-4">
                 <Button
                   type="button"
@@ -593,7 +570,6 @@ const Products = () => {
         </Dialog>
       </div>
 
-      {/* Dialog for editing product */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -671,6 +647,40 @@ const Products = () => {
                     )
                   )}
                 </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Ingredientes</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newIngredient}
+                    onChange={(e) => setNewIngredient(e.target.value)}
+                    placeholder="Digite um ingrediente"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddIngredient}
+                    variant="outline"
+                  >
+                    Adicionar
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {editingProduct.ingredients?.map((ingredient, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      <span>{ingredient}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveIngredient(index)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="flex justify-end space-x-2 pt-4">
                 <Button
