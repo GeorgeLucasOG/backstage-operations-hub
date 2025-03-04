@@ -11,8 +11,7 @@ import {
   Store, 
   LogOut,
   Receipt,
-  DollarSign,
-  Package
+  DollarSign
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -38,7 +37,6 @@ const AdminLayout = () => {
     { icon: Coffee, label: "Produtos", path: "/admin/products" },
     { icon: List, label: "Categorias", path: "/admin/menu" },
     { icon: ShoppingCart, label: "Pedidos", path: "/admin/orders" },
-    { icon: Package, label: "Estoque", path: "/admin/inventory" },
     { icon: Receipt, label: "Contas a Receber", path: "/admin/accounts-receivable" },
     { icon: DollarSign, label: "Contas a Pagar", path: "/admin/accounts-payable" },
     { icon: ShoppingCart, label: "Caixa", path: "/admin/cash" },
