@@ -89,6 +89,7 @@ const Products = () => {
   } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
+      console.log("Consultando produtos...");
       const { data, error } = await supabase
         .from("Product")
         .select("*")
@@ -100,6 +101,14 @@ const Products = () => {
       }
 
       console.log("Dados de produtos obtidos:", data);
+      if (data && data.length > 0) {
+        console.log(
+          "Exemplo de ingredientes do primeiro produto:",
+          data[0].ingredients
+        );
+        console.log("Tipo dos ingredientes:", typeof data[0].ingredients);
+      }
+
       return data as Product[];
     },
   });
@@ -132,8 +141,15 @@ const Products = () => {
       price: number;
       imageUrl: string;
       menuCategoryId: string | null;
+      ingredients: string[]; // Array de ingredientes
     }) => {
       console.log("Iniciando atualização do produto:", updatedProduct);
+
+      const now = new Date().toISOString();
+
+      // Alguns bancos de dados podem exigir que arrays sejam armazenados como JSON strings
+      // Por padrão, vamos manter como array, pois o Supabase geralmente suporta arrays diretamente
+      console.log("Ingredientes que serão salvos:", updatedProduct.ingredients);
 
       const { data, error } = await supabase
         .from("Product")
@@ -143,7 +159,8 @@ const Products = () => {
           price: updatedProduct.price,
           imageUrl: updatedProduct.imageUrl,
           menuCategoryId: updatedProduct.menuCategoryId,
-          updatedAt: new Date().toISOString(),
+          ingredients: updatedProduct.ingredients, // Salvando os ingredientes
+          updatedAt: now,
         })
         .eq("id", updatedProduct.id)
         .select();
@@ -162,7 +179,8 @@ const Products = () => {
       setEditingProduct(null);
       toast({
         title: "Sucesso",
-        description: "Produto atualizado com sucesso!",
+        description:
+          "Produto atualizado com sucesso! Os ingredientes foram salvos.",
       });
     },
     onError: (error) => {
@@ -218,11 +236,21 @@ const Products = () => {
 
   const handleAddIngredient = () => {
     if (!newIngredient.trim()) return;
-    
+
     if (isEditOpen && editingProduct) {
+      const ingredientToAdd = newIngredient.trim();
+      console.log(
+        `Adicionando ingrediente "${ingredientToAdd}" ao produto em edição`
+      );
+
+      // Garantir que ingredients é sempre um array
+      const currentIngredients = Array.isArray(editingProduct.ingredients)
+        ? editingProduct.ingredients
+        : [];
+
       setEditingProduct({
         ...editingProduct,
-        ingredients: [...(editingProduct.ingredients || []), newIngredient.trim()],
+        ingredients: [...currentIngredients, ingredientToAdd],
       });
     } else {
       setNewProduct({
@@ -235,11 +263,19 @@ const Products = () => {
 
   const handleRemoveIngredient = (index: number) => {
     if (isEditOpen && editingProduct) {
-      const updatedIngredients = [...(editingProduct.ingredients || [])];
-      updatedIngredients.splice(index, 1);
+      // Garantir que ingredients é sempre um array
+      const currentIngredients = Array.isArray(editingProduct.ingredients)
+        ? [...editingProduct.ingredients]
+        : [];
+
+      console.log(
+        `Removendo ingrediente "${currentIngredients[index]}" do produto em edição`
+      );
+
+      currentIngredients.splice(index, 1);
       setEditingProduct({
         ...editingProduct,
-        ingredients: updatedIngredients,
+        ingredients: currentIngredients,
       });
     } else {
       const updatedIngredients = [...newProduct.ingredients];
@@ -302,7 +338,8 @@ const Products = () => {
         name: newProduct.name.trim(),
         description: newProduct.description?.trim() || "",
         price: parseFloat(newProduct.price) || 0,
-        imageUrl: newProduct.image_url?.trim() || "https://via.placeholder.com/150",
+        imageUrl:
+          newProduct.image_url?.trim() || "https://via.placeholder.com/150",
         menuCategoryId: newProduct.category_id || null,
         restaurantId: validRestaurantId,
         ingredients: newProduct.ingredients,
@@ -360,7 +397,34 @@ const Products = () => {
   };
 
   const handleEdit = (product: Product) => {
-    setEditingProduct(product);
+    console.log("Editando produto:", product);
+
+    // Garantir que os ingredientes estejam no formato correto
+    let normalizedIngredients: string[] = [];
+
+    // Verificar se há ingredientes e convertê-los para array se necessário
+    if (product.ingredients) {
+      if (Array.isArray(product.ingredients)) {
+        normalizedIngredients = product.ingredients;
+      } else if (typeof product.ingredients === "string") {
+        // Tenta converter de JSON se for uma string
+        try {
+          normalizedIngredients = JSON.parse(product.ingredients);
+        } catch (e) {
+          console.warn("Erro ao converter ingredients de JSON:", e);
+          // Se falhar, trata como uma string única
+          normalizedIngredients = [product.ingredients];
+        }
+      }
+    }
+
+    console.log("Ingredientes normalizados:", normalizedIngredients);
+
+    // Atualizar o produto com ingredients normalizados
+    setEditingProduct({
+      ...product,
+      ingredients: normalizedIngredients,
+    });
     setIsEditOpen(true);
   };
 
@@ -386,6 +450,17 @@ const Products = () => {
         throw new Error("O preço deve ser um número válido maior que zero");
       }
 
+      // Certificar-se de que ingredients é um array não-nulo
+      const ingredients = Array.isArray(editingProduct.ingredients)
+        ? editingProduct.ingredients
+        : [];
+
+      console.log(
+        "Enviando produto para atualização com ingredientes:",
+        ingredients
+      );
+      console.log("Detalhes completos do produto:", editingProduct);
+
       updateMutation.mutate({
         id: editingProduct.id,
         name: editingProduct.name,
@@ -393,6 +468,13 @@ const Products = () => {
         price: editingProduct.price,
         imageUrl: editingProduct.imageUrl || "https://via.placeholder.com/150",
         menuCategoryId: editingProduct.menuCategoryId,
+        ingredients: ingredients, // Garantindo que é um array válido
+      });
+
+      // Mensagem visual temporária
+      toast({
+        title: "Processando...",
+        description: "Salvando produto e seus ingredientes...",
       });
     } catch (error) {
       console.error("Erro ao processar edição:", error);
@@ -429,6 +511,35 @@ const Products = () => {
         return { ...prev, [name]: value };
       }
     });
+  };
+
+  const getIngredientsDisplay = (
+    ingredients: string[] | string | null | undefined
+  ): string => {
+    if (!ingredients) return "Nenhum ingrediente";
+
+    try {
+      if (Array.isArray(ingredients)) {
+        return ingredients.join(", ");
+      } else if (typeof ingredients === "string") {
+        try {
+          // Tenta converter de JSON se for uma string
+          const parsed = JSON.parse(ingredients);
+          if (Array.isArray(parsed)) {
+            return parsed.join(", ");
+          }
+          return ingredients;
+        } catch (e) {
+          // Se não for um JSON válido, retorna a string como está
+          return ingredients;
+        }
+      }
+      // Se não for nem array nem string, converte para string
+      return String(ingredients);
+    } catch (error) {
+      console.error("Erro ao formatar ingredientes:", error, ingredients);
+      return "Erro ao exibir ingredientes";
+    }
   };
 
   return (
@@ -520,16 +631,22 @@ const Products = () => {
               </div>
               <div className="space-y-2">
                 <Label>Ingredientes</Label>
+                <div className="text-xs text-gray-500 mb-2">
+                  Adicione os ingredientes deste produto para melhor informação
+                  ao cliente.
+                </div>
                 <div className="flex gap-2">
                   <Input
                     value={newIngredient}
                     onChange={(e) => setNewIngredient(e.target.value)}
                     placeholder="Digite um ingrediente"
+                    className="flex-grow"
                   />
                   <Button
                     type="button"
                     onClick={handleAddIngredient}
                     variant="outline"
+                    size="sm"
                   >
                     Adicionar
                   </Button>
@@ -650,37 +767,51 @@ const Products = () => {
               </div>
               <div className="space-y-2">
                 <Label>Ingredientes</Label>
+                <div className="text-xs text-gray-500 mb-2">
+                  Adicione os ingredientes deste produto para melhor informação
+                  ao cliente.
+                </div>
                 <div className="flex gap-2">
                   <Input
                     value={newIngredient}
                     onChange={(e) => setNewIngredient(e.target.value)}
                     placeholder="Digite um ingrediente"
+                    className="flex-grow"
                   />
                   <Button
                     type="button"
                     onClick={handleAddIngredient}
                     variant="outline"
+                    size="sm"
                   >
                     Adicionar
                   </Button>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {editingProduct.ingredients?.map((ingredient, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded"
-                    >
-                      <span>{ingredient}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveIngredient(index)}
-                        className="text-red-500 hover:text-red-700"
+                {editingProduct?.ingredients &&
+                editingProduct.ingredients.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mt-2 p-2 border rounded bg-gray-50">
+                    {editingProduct.ingredients.map((ingredient, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-1 bg-white px-2 py-1 rounded border shadow-sm"
                       >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                        <span>{ingredient}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveIngredient(index)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-amber-600 mt-2">
+                    Nenhum ingrediente adicionado. Adicione ingredientes para
+                    informar melhor seus clientes.
+                  </div>
+                )}
               </div>
               <div className="flex justify-end space-x-2 pt-4">
                 <Button
@@ -711,6 +842,7 @@ const Products = () => {
                 <TableHead>Nome</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Preço</TableHead>
+                <TableHead>Ingredientes</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -730,6 +862,35 @@ const Products = () => {
                       {product.description}
                     </TableCell>
                     <TableCell>{formatPrice(product.price)}</TableCell>
+                    <TableCell>
+                      {product.ingredients &&
+                      Array.isArray(product.ingredients) &&
+                      product.ingredients.length > 0 ? (
+                        <div className="max-w-xs">
+                          <div className="flex flex-wrap gap-1">
+                            {product.ingredients
+                              .slice(0, 3)
+                              .map((ingredient, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
+                                >
+                                  {ingredient}
+                                </span>
+                              ))}
+                            {product.ingredients.length > 3 && (
+                              <span className="text-xs text-gray-500">
+                                +{product.ingredients.length - 3} mais
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs italic">
+                          Nenhum ingrediente
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
