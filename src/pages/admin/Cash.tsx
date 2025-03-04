@@ -1,395 +1,285 @@
-
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
-import { CashRegister, CashMovement } from "./inventory/types";
+
+// Define types here instead of importing from deleted inventory/types
+interface CashRegister {
+  id: string;
+  name: string;
+  initialAmount: number;
+  currentAmount: number;
+  status: string;
+  restaurantId: string;
+  openedAt: string | null;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+interface CashMovement {
+  id: string;
+  description: string;
+  amount: number;
+  type: string;
+  paymentMethod: string;
+  cashRegisterId: string;
+  restaurantId: string;
+  orderId: number | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
 
 const Cash = () => {
   const { toast } = useToast();
-  const [initialAmount, setInitialAmount] = useState("");
-  const [cashName, setCashName] = useState("");
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("CASH");
-  const [changeAmount, setChangeAmount] = useState("");
+  const queryClient = useQueryClient();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newCashRegister, setNewCashRegister] = useState({
+    name: "",
+    initialAmount: "",
+  });
 
-  // Carregar registros de caixa
-  const { data: registers, refetch: refetchRegisters } = useQuery({
-    queryKey: ["cash-registers"],
+  const { data: cashRegisters, isLoading, refetch } = useQuery({
+    queryKey: ["cashRegisters"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("CashRegisters")
         .select("*")
         .order("createdAt", { ascending: false });
 
-      if (error) throw error;
-      return data as CashRegister[];
-    }
-  });
-
-  // Carregar movimentações do dia
-  const { data: movements, refetch: refetchMovements } = useQuery({
-    queryKey: ["cash-movements"],
-    queryFn: async () => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const { data, error } = await supabase
-        .from("CashMovements")
-        .select("*")
-        .gte("createdAt", today.toISOString())
-        .order("createdAt", { ascending: false });
-
-      if (error) throw error;
-      return data as CashMovement[];
-    }
-  });
-
-  const getCurrentRegister = () => {
-    return registers?.find(register => register.status === "OPEN");
-  };
-
-  const handleOpenCash = async () => {
-    try {
-      const { error } = await supabase.from("CashRegisters").insert({
-        name: cashName,
-        initialAmount: parseFloat(initialAmount),
-        currentAmount: parseFloat(initialAmount),
-        openedAt: new Date().toISOString(),
-        status: "OPEN",
-        restaurantId: DEFAULT_RESTAURANT_ID
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Caixa aberto com sucesso!",
-      });
-
-      setCashName("");
-      setInitialAmount("");
-      refetchRegisters();
-    } catch (error) {
-      console.error("Erro ao abrir o caixa:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao abrir o caixa",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCloseCash = async () => {
-    const currentRegister = getCurrentRegister();
-    if (!currentRegister) return;
-
-    try {
-      const { error } = await supabase
-        .from("CashRegisters")
-        .update({
-          status: "CLOSED",
-          closedAt: new Date().toISOString()
-        })
-        .eq("id", currentRegister.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Caixa fechado com sucesso!",
-      });
-
-      refetchRegisters();
-    } catch (error) {
-      console.error("Erro ao fechar o caixa:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao fechar o caixa",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleMovement = async (type: "IN" | "OUT") => {
-    const currentRegister = getCurrentRegister();
-    if (!currentRegister) {
-      toast({
-        title: "Erro",
-        description: "Nenhum caixa aberto",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const movementAmount = parseFloat(amount);
-      let newAmount = currentRegister.currentAmount;
-
-      if (type === "IN") {
-        newAmount += movementAmount;
-      } else {
-        if (newAmount < movementAmount) {
-          throw new Error("Saldo insuficiente");
-        }
-        newAmount -= movementAmount;
+      if (error) {
+        console.error("Erro ao consultar caixas:", error);
+        throw new Error("Não foi possível carregar os caixas");
       }
 
-      // Registrar movimento
-      const { error: movementError } = await supabase.from("CashMovements").insert({
-        cashRegisterId: currentRegister.id,
-        amount: movementAmount,
-        type,
-        description,
-        paymentMethod,
-        restaurantId: DEFAULT_RESTAURANT_ID
-      });
+      console.log("Dados de caixas obtidos:", data);
+      return data as CashRegister[];
+    },
+  });
 
-      if (movementError) throw movementError;
+  const createMutation = useMutation({
+    mutationFn: async (newCashRegister: { name: string; initialAmount: number }) => {
+      console.log("Iniciando criação de caixa:", newCashRegister);
 
-      // Atualizar saldo do caixa
-      const { error: updateError } = await supabase
+      const { data, error } = await supabase
         .from("CashRegisters")
-        .update({ currentAmount: newAmount })
-        .eq("id", currentRegister.id);
+        .insert([
+          {
+            name: newCashRegister.name,
+            initialAmount: newCashRegister.initialAmount,
+            currentAmount: newCashRegister.initialAmount,
+            status: "OPEN",
+            restaurantId: "d2d5278d-8df1-4819-87a0-f23b519e3f2a", // Substitua pelo ID do restaurante atual
+            openedAt: new Date().toISOString(),
+          },
+        ])
+        .select();
 
-      if (updateError) throw updateError;
+      if (error) {
+        console.error("Erro ao criar caixa:", error);
+        throw new Error(`Erro ao criar caixa: ${error.message}`);
+      }
 
+      console.log("Caixa criado com sucesso:", data);
+      return data[0];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cashRegisters"] });
+      setIsOpen(false);
+      setNewCashRegister({ name: "", initialAmount: "" });
       toast({
         title: "Sucesso",
-        description: `Movimento de ${type === "IN" ? "entrada" : "saída"} registrado!`,
+        description: "Caixa criado com sucesso!",
       });
-
-      setDescription("");
-      setAmount("");
-      setChangeAmount("");
-      setPaymentMethod("CASH");
-      refetchRegisters();
-      refetchMovements();
-    } catch (error) {
-      console.error("Erro ao registrar movimento:", error);
+    },
+    onError: (error) => {
+      console.error("Erro na criação:", error);
       toast({
         title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao registrar movimento",
+        description:
+          error instanceof Error ? error.message : "Erro ao criar caixa",
         variant: "destructive",
       });
+    },
+  });
+
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setNewCashRegister((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      console.log("Iniciando adição de caixa com dados:", newCashRegister);
+
+      if (!newCashRegister.name.trim()) {
+        throw new Error("O nome do caixa é obrigatório");
+      }
+
+      if (
+        !newCashRegister.initialAmount ||
+        isNaN(parseFloat(newCashRegister.initialAmount))
+      ) {
+        throw new Error("O valor inicial deve ser um número válido");
+      }
+
+      await createMutation.mutateAsync({
+        name: newCashRegister.name.trim(),
+        initialAmount: parseFloat(newCashRegister.initialAmount) || 0,
+      });
+
+      refetch();
+    } catch (error) {
+      console.error("Erro ao adicionar caixa:", error);
+      toast({
+        title: "Erro",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível adicionar o caixa",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const currentRegister = getCurrentRegister();
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(amount);
+  };
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Caixa</h1>
-      
-      {!currentRegister ? (
-        <Card className="p-4">
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Abrir Novo Caixa</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                placeholder="Nome do Caixa"
-                value={cashName}
-                onChange={(e) => setCashName(e.target.value)}
-                required
-              />
-              <Input
-                type="number"
-                placeholder="Valor Inicial"
-                value={initialAmount}
-                onChange={(e) => setInitialAmount(e.target.value)}
-                required
-              />
-            </div>
-            <Button onClick={handleOpenCash}>Abrir Caixa</Button>
-          </div>
-        </Card>
-      ) : (
-        <>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">{currentRegister.name}</h2>
-                <p className="text-sm text-muted-foreground">
-                  Aberto em: {format(new Date(currentRegister.openedAt!), "dd/MM/yyyy HH:mm")}
-                </p>
-                <p className="text-sm font-medium">
-                  Saldo atual: R$ {currentRegister.currentAmount.toFixed(2)}
-                </p>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Caixas</h1>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Caixa
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar Novo Caixa</DialogTitle>
+              <DialogDescription>
+                Preencha os campos para adicionar um novo caixa.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={newCashRegister.name}
+                  onChange={handleInputChange}
+                  required
+                />
               </div>
-              <Button variant="destructive" onClick={handleCloseCash}>
-                Fechar Caixa
-              </Button>
-            </div>
-          </Card>
+              <div className="space-y-2">
+                <Label htmlFor="initialAmount">Valor Inicial (R$)</Label>
+                <Input
+                  id="initialAmount"
+                  name="initialAmount"
+                  type="number"
+                  step="0.01"
+                  value={newCashRegister.initialAmount}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Salvar" : "Salvar"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button className="w-full" variant="default">Nova Entrada</Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>Registrar Entrada</SheetTitle>
-                  <SheetDescription>
-                    Registre uma nova entrada de dinheiro no caixa
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="space-y-4 py-4">
-                  <Input
-                    placeholder="Descrição"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    required
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Valor"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    required
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Troco (opcional)"
-                    value={changeAmount}
-                    onChange={(e) => setChangeAmount(e.target.value)}
-                  />
-                  <select
-                    className="w-full p-2 border rounded"
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                  >
-                    <option value="CASH">Dinheiro</option>
-                    <option value="CARD">Cartão</option>
-                    <option value="PIX">PIX</option>
-                  </select>
-                </div>
-                <SheetFooter>
-                  <SheetClose asChild>
-                    <Button onClick={() => handleMovement("IN")}>Confirmar Entrada</Button>
-                  </SheetClose>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
-
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button className="w-full" variant="secondary">Nova Saída</Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>Registrar Saída</SheetTitle>
-                  <SheetDescription>
-                    Registre uma nova saída de dinheiro do caixa
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="space-y-4 py-4">
-                  <Input
-                    placeholder="Descrição"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    required
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Valor"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    required
-                  />
-                </div>
-                <SheetFooter>
-                  <SheetClose asChild>
-                    <Button variant="secondary" onClick={() => handleMovement("OUT")}>
-                      Confirmar Saída
-                    </Button>
-                  </SheetClose>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
-          </div>
-
-          <Card className="p-4">
-            <h2 className="text-lg font-semibold mb-4">Movimentações do Dia</h2>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Horário</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Método</TableHead>
-                  <TableHead>Valor</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {movements?.map((movement) => (
-                  <TableRow key={movement.id}>
-                    <TableCell>
-                      {format(new Date(movement.createdAt), "HH:mm")}
-                    </TableCell>
-                    <TableCell>{movement.type === "IN" ? "Entrada" : "Saída"}</TableCell>
-                    <TableCell>{movement.description}</TableCell>
-                    <TableCell>{movement.paymentMethod}</TableCell>
-                    <TableCell className={movement.type === "IN" ? "text-green-600" : "text-red-600"}>
-                      R$ {movement.amount.toFixed(2)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        </>
-      )}
-
-      {registers && registers.length > 0 && (
-        <Card className="p-4">
-          <h2 className="text-lg font-semibold mb-4">Histórico de Caixas</h2>
+      {isLoading ? (
+        <div>Carregando...</div>
+      ) : (
+        <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Valor Inicial</TableHead>
-                <TableHead>Valor Final</TableHead>
-                <TableHead>Abertura</TableHead>
-                <TableHead>Fechamento</TableHead>
+                <TableHead>Valor Atual</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {registers.map((register) => (
-                <TableRow key={register.id}>
-                  <TableCell>{register.name}</TableCell>
-                  <TableCell>R$ {register.initialAmount.toFixed(2)}</TableCell>
-                  <TableCell>R$ {register.currentAmount.toFixed(2)}</TableCell>
-                  <TableCell>
-                    {register.openedAt ? format(new Date(register.openedAt), "dd/MM/yyyy HH:mm") : "-"}
+              {cashRegisters && cashRegisters.length > 0 ? (
+                cashRegisters.map((cashRegister) => (
+                  <TableRow key={cashRegister.id}>
+                    <TableCell>{cashRegister.name}</TableCell>
+                    <TableCell>{formatCurrency(cashRegister.initialAmount)}</TableCell>
+                    <TableCell>{formatCurrency(cashRegister.currentAmount)}</TableCell>
+                    <TableCell>{cashRegister.status}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          Ver Detalhes
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-4">
+                    Nenhum caixa encontrado
                   </TableCell>
-                  <TableCell>
-                    {register.closedAt ? format(new Date(register.closedAt), "dd/MM/yyyy HH:mm") : "-"}
-                  </TableCell>
-                  <TableCell>{register.status === "OPEN" ? "Aberto" : "Fechado"}</TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
-        </Card>
+        </div>
       )}
     </div>
   );
