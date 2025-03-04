@@ -1,268 +1,16 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  supabase,
-  DEFAULT_RESTAURANT_ID,
-} from "@/integrations/supabase/client";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Check, Clock, Pencil, Trash, AlertCircle } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-  SheetFooter,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Plus, AlertCircle } from "lucide-react";
+import { SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/use-toast";
-import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
 
-function generateUUID() {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-interface Order {
-  id: number;
-  customerName: string;
-  customerCpf: string | null;
-  total: number;
-  status: "PENDING" | "IN_PREPARATION" | "FINISHED";
-  consumptionMethod: "TAKEAWAY" | "DINE_IN";
-  restaurantId: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Restaurant {
-  id: string;
-  name: string;
-}
-
-interface OrderFormData {
-  customerName: string;
-  customerCpf: string;
-  tableNumber: string;
-  total: string;
-  consumptionMethod: "TAKEAWAY" | "DINE_IN";
-  restaurantId: string;
-}
-
-const OrderForm = ({
-  onSubmit,
-  initialData = null,
-  buttonText = "Criar Pedido",
-  restaurants = [],
-}: {
-  onSubmit: (data: OrderFormData) => void;
-  initialData?: Order | null;
-  buttonText?: string;
-  restaurants?: Restaurant[];
-}) => {
-  const getInitialFormData = (): OrderFormData => {
-    if (initialData) {
-      return {
-        customerName: initialData.customerName,
-        customerCpf: initialData.customerCpf || "",
-        tableNumber: "",
-        total: initialData.total.toString(),
-        consumptionMethod: initialData.consumptionMethod,
-        restaurantId: initialData.restaurantId,
-      };
-    }
-
-    const defaultRestaurantId =
-      restaurants.length > 0 ? restaurants[0].id : DEFAULT_RESTAURANT_ID;
-
-    return {
-      customerName: "",
-      customerCpf: "",
-      tableNumber: "",
-      total: "",
-      consumptionMethod: "DINE_IN",
-      restaurantId: defaultRestaurantId,
-    };
-  };
-
-  const [formData, setFormData] = useState<OrderFormData>(getInitialFormData());
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (restaurants.length > 0 && !formData.restaurantId) {
-      setFormData((prev) => ({
-        ...prev,
-        restaurantId: restaurants[0].id,
-      }));
-    }
-  }, [restaurants]);
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    if (!formData.customerName.trim()) {
-      alert("Nome do cliente é obrigatório");
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (formData.consumptionMethod === "DINE_IN" && !formData.tableNumber) {
-      alert("Número da mesa é obrigatório para consumo no local");
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (
-      !formData.total ||
-      isNaN(parseFloat(formData.total)) ||
-      parseFloat(formData.total) <= 0
-    ) {
-      alert("Informe um valor total válido");
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (!formData.restaurantId) {
-      alert("Selecione um restaurante");
-      setIsSubmitting(false);
-      return;
-    }
-
-    onSubmit(formData);
-    setIsSubmitting(false);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-      <div className="space-y-2">
-        <Label htmlFor="customerName">Nome do Cliente</Label>
-        <Input
-          id="customerName"
-          name="customerName"
-          value={formData.customerName}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="customerCpf">CPF (opcional)</Label>
-        <Input
-          id="customerCpf"
-          name="customerCpf"
-          value={formData.customerCpf}
-          onChange={handleChange}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="restaurantId">Restaurante</Label>
-        <select
-          id="restaurantId"
-          name="restaurantId"
-          className="w-full p-2 border rounded"
-          value={formData.restaurantId}
-          onChange={handleChange}
-          required
-        >
-          <option value="">Selecione um restaurante</option>
-          {restaurants.map((restaurant) => (
-            <option key={restaurant.id} value={restaurant.id}>
-              {restaurant.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="consumptionMethod">Método de Consumo</Label>
-        <select
-          id="consumptionMethod"
-          name="consumptionMethod"
-          className="w-full p-2 border rounded"
-          value={formData.consumptionMethod}
-          onChange={handleChange}
-          required
-        >
-          <option value="DINE_IN">No Local</option>
-          <option value="TAKEAWAY">Para Viagem</option>
-        </select>
-      </div>
-      {formData.consumptionMethod === "DINE_IN" && (
-        <div className="space-y-2">
-          <Label htmlFor="tableNumber">Número da Mesa</Label>
-          <Input
-            id="tableNumber"
-            name="tableNumber"
-            type="number"
-            value={formData.tableNumber}
-            onChange={handleChange}
-            required
-          />
-        </div>
-      )}
-      <div className="space-y-2">
-        <Label htmlFor="total">Valor Total</Label>
-        <Input
-          id="total"
-          name="total"
-          type="number"
-          step="0.01"
-          value={formData.total}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Processando..." : buttonText}
-      </Button>
-    </form>
-  );
-};
-
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case "PENDING":
-      return <Badge variant="outline">Pendente</Badge>;
-    case "IN_PREPARATION":
-      return <Badge variant="secondary">Em Preparação</Badge>;
-    case "FINISHED":
-      return (
-        <Badge className="bg-green-100 text-green-800 border-green-200">
-          Finalizado
-        </Badge>
-      );
-    default:
-      return <Badge>{status}</Badge>;
-  }
-};
+import { Order, Restaurant, OrderFormData } from "./orders/types";
+import { OrdersTable } from "./orders/components/OrdersTable";
+import { DeleteOrderDialog } from "./orders/components/DeleteOrderDialog";
+import { OrderSheets } from "./orders/components/OrderSheets";
 
 const Orders = () => {
   const { toast } = useToast();
@@ -324,11 +72,6 @@ const Orders = () => {
       }
     },
   });
-
-  const restaurantMap = restaurants.reduce((acc, restaurant) => {
-    acc[restaurant.id] = restaurant.name;
-    return acc;
-  }, {} as Record<string, string>);
 
   const createMutation = useMutation({
     mutationFn: async (orderData: OrderFormData) => {
@@ -579,10 +322,6 @@ const Orders = () => {
     }
   };
 
-  const formatConsumption = (method: string) => {
-    return method === "DINE_IN" ? "No Local" : "Para Viagem";
-  };
-
   if (ordersError) {
     console.error("Erro na consulta de pedidos:", ordersError);
     return (
@@ -611,185 +350,37 @@ const Orders = () => {
               Novo Pedido
             </Button>
           </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Novo Pedido</SheetTitle>
-              <SheetDescription>
-                Preencha os dados para criar um novo pedido
-              </SheetDescription>
-            </SheetHeader>
-            {noRestaurants ? (
-              <div className="mt-4 p-4 border border-red-200 rounded bg-red-50 text-red-700">
-                <p>
-                  Não há restaurantes cadastrados. Adicione pelo menos um
-                  restaurante antes de criar pedidos.
-                </p>
-              </div>
-            ) : (
-              <OrderForm
-                onSubmit={(data) => createMutation.mutate(data)}
-                restaurants={restaurants}
-              />
-            )}
-          </SheetContent>
         </Sheet>
       </div>
 
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
-            <DialogDescription>
-              Tem certeza que deseja excluir este pedido? Esta ação não pode ser
-              desfeita.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Excluir
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteOrderDialog 
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={confirmDelete}
+      />
 
-      <Sheet open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Editar Pedido #{editingOrder?.id}</SheetTitle>
-            <SheetDescription>
-              Atualize os dados do pedido conforme necessário
-            </SheetDescription>
-          </SheetHeader>
-          {editingOrder && (
-            <OrderForm
-              initialData={editingOrder}
-              onSubmit={(data) =>
-                updateMutation.mutate({
-                  ...data,
-                  id: editingOrder.id,
-                })
-              }
-              buttonText="Atualizar Pedido"
-              restaurants={restaurants}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
+      <OrderSheets 
+        isCreateOpen={isCreateOpen}
+        setIsCreateOpen={setIsCreateOpen}
+        isEditOpen={isEditOpen}
+        setIsEditOpen={setIsEditOpen}
+        editingOrder={editingOrder}
+        restaurants={restaurants}
+        onCreateSubmit={(data) => createMutation.mutate(data)}
+        onUpdateSubmit={(data) => updateMutation.mutate(data)}
+        noRestaurants={noRestaurants}
+      />
 
-      {isOrdersLoading || isLoading ? (
-        <div className="flex items-center justify-center p-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-          <span className="ml-2">Carregando pedidos...</span>
-        </div>
-      ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>CPF</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Restaurante</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[200px]">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders && orders.length > 0 ? (
-                orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell>#{order.id}</TableCell>
-                    <TableCell>{order.customerName}</TableCell>
-                    <TableCell>{order.customerCpf || "-"}</TableCell>
-                    <TableCell>
-                      {formatConsumption(order.consumptionMethod)}
-                    </TableCell>
-                    <TableCell>
-                      {new Intl.NumberFormat("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      }).format(order.total)}
-                    </TableCell>
-                    <TableCell>
-                      {restaurantMap[order.restaurantId] || order.restaurantId}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(order.createdAt), "dd/MM/yyyy HH:mm")}
-                    </TableCell>
-                    <TableCell>{getStatusLabel(order.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2 flex-wrap">
-                        {order.status === "PENDING" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              updateStatusMutation.mutate({
-                                id: order.id,
-                                status: "IN_PREPARATION",
-                              })
-                            }
-                          >
-                            <Clock className="h-4 w-4 mr-1" />
-                            Preparando
-                          </Button>
-                        )}
-                        {order.status === "IN_PREPARATION" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              updateStatusMutation.mutate({
-                                id: order.id,
-                                status: "FINISHED",
-                              })
-                            }
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Finalizar
-                          </Button>
-                        )}
-
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-blue-600 hover:text-blue-800"
-                          onClick={() => handleEdit(order)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-600 hover:text-red-800"
-                          onClick={() => handleDelete(order.id)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-4">
-                    Nenhum pedido encontrado
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      <OrdersTable
+        orders={orders || []}
+        restaurants={restaurants}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onStatusUpdate={(id, status) => 
+          updateStatusMutation.mutate({ id, status })
+        }
+        isLoading={isOrdersLoading || isLoading}
+      />
     </div>
   );
 };
