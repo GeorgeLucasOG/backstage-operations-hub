@@ -37,7 +37,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
+// Função para gerar UUID v4
 function generateUUID() {
+  // Implementação simples de UUID v4
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
     const r = (Math.random() * 16) | 0;
     const v = c === "x" ? r : (r & 0x3) | 0x8;
@@ -65,7 +67,7 @@ interface Restaurant {
 interface OrderFormData {
   customerName: string;
   customerCpf: string;
-  tableNumber: string;
+  tableNumber: string; // Mantemos no formulário para referência, mas não enviamos ao banco
   total: string;
   consumptionMethod: "TAKEAWAY" | "DINE_IN";
   restaurantId: string;
@@ -87,13 +89,14 @@ const OrderForm = ({
       return {
         customerName: initialData.customerName,
         customerCpf: initialData.customerCpf || "",
-        tableNumber: "",
+        tableNumber: "", // A coluna não existe no banco, iniciamos vazia
         total: initialData.total.toString(),
         consumptionMethod: initialData.consumptionMethod,
         restaurantId: initialData.restaurantId,
       };
     }
 
+    // Se temos restaurantes, use o primeiro como padrão
     const defaultRestaurantId =
       restaurants.length > 0 ? restaurants[0].id : DEFAULT_RESTAURANT_ID;
 
@@ -110,6 +113,7 @@ const OrderForm = ({
   const [formData, setFormData] = useState<OrderFormData>(getInitialFormData());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Atualizar o restaurante padrão quando a lista de restaurantes mudar
   useEffect(() => {
     if (restaurants.length > 0 && !formData.restaurantId) {
       setFormData((prev) => ({
@@ -130,6 +134,7 @@ const OrderForm = ({
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Validar os dados antes de enviar
     if (!formData.customerName.trim()) {
       alert("Nome do cliente é obrigatório");
       setIsSubmitting(false);
@@ -274,6 +279,7 @@ const Orders = () => {
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Consultar restaurantes disponíveis
   const { data: restaurants = [], isLoading: isLoadingRestaurants } = useQuery({
     queryKey: ["restaurants"],
     queryFn: async () => {
@@ -325,6 +331,7 @@ const Orders = () => {
     },
   });
 
+  // Obter mapa de nomes de restaurantes para exibição
   const restaurantMap = restaurants.reduce((acc, restaurant) => {
     acc[restaurant.id] = restaurant.name;
     return acc;
@@ -334,12 +341,14 @@ const Orders = () => {
     mutationFn: async (orderData: OrderFormData) => {
       console.log("Criando novo pedido com dados:", orderData);
 
+      // Verificar se temos restaurantes disponíveis
       if (!restaurants || restaurants.length === 0) {
         throw new Error(
           "Nenhum restaurante disponível para associar ao pedido"
         );
       }
 
+      // Verificar se o restauranteId é válido (existe na lista)
       const restaurantExists = restaurants.some(
         (r) => r.id === orderData.restaurantId
       );
@@ -351,9 +360,11 @@ const Orders = () => {
 
       const now = new Date().toISOString();
 
+      // IMPORTANTE: NÃO INCLUIR tableNumber no payload enviado ao banco
+      // pois essa coluna não existe na tabela Order
       const data = {
         customerName: orderData.customerName,
-        customerCpf: orderData.customerCpf || null,
+        customerCpf: orderData.customerCpf || null, // Tornando CPF opcional
         total: parseFloat(orderData.total),
         status: "PENDING" as const,
         consumptionMethod: orderData.consumptionMethod,
@@ -410,6 +421,7 @@ const Orders = () => {
     mutationFn: async (orderData: OrderFormData & { id: number }) => {
       console.log("Atualizando pedido:", orderData);
 
+      // Verificar se o restauranteId é válido (existe na lista)
       const restaurantExists = restaurants.some(
         (r) => r.id === orderData.restaurantId
       );
@@ -421,9 +433,11 @@ const Orders = () => {
 
       const now = new Date().toISOString();
 
+      // IMPORTANTE: NÃO INCLUIR tableNumber no payload enviado ao banco
+      // pois essa coluna não existe na tabela Order
       const data = {
         customerName: orderData.customerName,
-        customerCpf: orderData.customerCpf || null,
+        customerCpf: orderData.customerCpf || null, // Tornando CPF opcional
         total: parseFloat(orderData.total),
         consumptionMethod: orderData.consumptionMethod,
         restaurantId: orderData.restaurantId,
@@ -562,17 +576,20 @@ const Orders = () => {
     },
   });
 
+  // Função para lidar com a ação de editar
   const handleEdit = (order: Order) => {
     console.log("Editando pedido:", order);
     setEditingOrder(order);
     setIsEditOpen(true);
   };
 
+  // Função para lidar com a ação de excluir
   const handleDelete = (id: number) => {
     setDeletingOrderId(id);
     setIsDeleteDialogOpen(true);
   };
 
+  // Função para confirmar exclusão
   const confirmDelete = () => {
     if (deletingOrderId) {
       deleteMutation.mutate(deletingOrderId);
@@ -583,6 +600,7 @@ const Orders = () => {
     return method === "DINE_IN" ? "No Local" : "Para Viagem";
   };
 
+  // Se houver um erro na consulta, mostrar mensagem
   if (ordersError) {
     console.error("Erro na consulta de pedidos:", ordersError);
     return (
@@ -597,6 +615,7 @@ const Orders = () => {
     );
   }
 
+  // Verificar se há restaurantes disponíveis
   const noRestaurants =
     !isLoadingRestaurants && (!restaurants || restaurants.length === 0);
 
@@ -635,6 +654,7 @@ const Orders = () => {
         </Sheet>
       </div>
 
+      {/* Dialog de Confirmação de Exclusão */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -658,6 +678,7 @@ const Orders = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Sheet de Edição */}
       <Sheet open={isEditOpen} onOpenChange={setIsEditOpen}>
         <SheetContent>
           <SheetHeader>
@@ -728,6 +749,7 @@ const Orders = () => {
                     <TableCell>{getStatusLabel(order.status)}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 flex-wrap">
+                        {/* Botões de Status */}
                         {order.status === "PENDING" && (
                           <Button
                             size="sm"
@@ -759,6 +781,7 @@ const Orders = () => {
                           </Button>
                         )}
 
+                        {/* Botões de Edição e Exclusão */}
                         <Button
                           size="sm"
                           variant="ghost"
