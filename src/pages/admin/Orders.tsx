@@ -715,6 +715,7 @@ const Orders = () => {
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Cliente</TableHead>
+                <TableHead>CPF</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Restaurante</TableHead>
@@ -729,6 +730,7 @@ const Orders = () => {
                   <TableRow key={order.id}>
                     <TableCell>#{order.id}</TableCell>
                     <TableCell>{order.customerName}</TableCell>
+                    <TableCell>{order.customerCpf || "-"}</TableCell>
                     <TableCell>
                       {formatConsumption(order.consumptionMethod)}
                     </TableCell>
@@ -802,7 +804,7 @@ const Orders = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-4">
+                  <TableCell colSpan={9} className="text-center py-4">
                     Nenhum pedido encontrado
                   </TableCell>
                 </TableRow>
