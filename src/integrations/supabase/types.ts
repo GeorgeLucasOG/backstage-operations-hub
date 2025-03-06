@@ -324,6 +324,7 @@ export type Database = {
       }
       Order: {
         Row: {
+          address: string | null
           consumptionMethod: Database["public"]["Enums"]["ConsumptionMethod"]
           createdAt: string
           customerCpf: string
@@ -333,8 +334,10 @@ export type Database = {
           status: Database["public"]["Enums"]["OrderStatus"]
           total: number
           updatedAt: string
+          whatsapp: string | null
         }
         Insert: {
+          address?: string | null
           consumptionMethod: Database["public"]["Enums"]["ConsumptionMethod"]
           createdAt?: string
           customerCpf: string
@@ -344,8 +347,10 @@ export type Database = {
           status: Database["public"]["Enums"]["OrderStatus"]
           total: number
           updatedAt: string
+          whatsapp?: string | null
         }
         Update: {
+          address?: string | null
           consumptionMethod?: Database["public"]["Enums"]["ConsumptionMethod"]
           createdAt?: string
           customerCpf?: string
@@ -355,6 +360,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["OrderStatus"]
           total?: number
           updatedAt?: string
+          whatsapp?: string | null
         }
         Relationships: [
           {

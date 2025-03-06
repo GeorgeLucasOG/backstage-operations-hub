@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Upload, Info } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -20,6 +20,12 @@ import {
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Restaurant {
   id: string;
@@ -50,6 +56,139 @@ function generateUUID() {
   });
 }
 
+const ImageUploadField = ({
+  id,
+  label,
+  onUpload,
+  currentImageUrl,
+}: {
+  id: string;
+  label: string;
+  onUpload: (url: string) => void;
+  currentImageUrl: string;
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(currentImageUrl);
+  const { toast } = useToast();
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar o tipo de arquivo
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Erro",
+        description: "Apenas arquivos JPEG, JPG, PNG ou WEBP são permitidos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Mostrar preview da imagem
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPreviewUrl(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Iniciar upload
+    setIsUploading(true);
+    
+    try {
+      const filename = `${Date.now()}-${file.name}`;
+      const { data, error } = await supabase.storage
+        .from('restaurant-images')
+        .upload(filename, file);
+
+      if (error) throw error;
+
+      // Obter URL pública da imagem
+      const { data: urlData } = await supabase.storage
+        .from('restaurant-images')
+        .getPublicUrl(filename);
+
+      onUpload(urlData.publicUrl);
+      
+      toast({
+        title: "Sucesso",
+        description: "Imagem enviada com sucesso!",
+      });
+    } catch (error) {
+      console.error("Erro ao fazer upload:", error);
+      toast({
+        title: "Erro",
+        description: `Erro ao fazer upload: ${(error as Error).message}`,
+        variant: "destructive",
+      });
+      // Restaurar a URL anterior em caso de erro
+      setPreviewUrl(currentImageUrl);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <label htmlFor={id} className="block text-sm font-medium">
+          {label}
+        </label>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Aceita imagens nos formatos JPEG, JPG, PNG ou WEBP</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      
+      <div className="flex flex-col gap-4">
+        {previewUrl && (
+          <div className="relative w-full h-40 bg-muted rounded-md overflow-hidden">
+            <img 
+              src={previewUrl} 
+              alt={label} 
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        
+        <div className="flex gap-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={triggerFileInput}
+            disabled={isUploading}
+            className="w-full"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {isUploading ? "Enviando..." : "Escolher Imagem"}
+          </Button>
+          <input
+            ref={fileInputRef}
+            id={id}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            onChange={handleFileChange}
+            className="hidden"
+            disabled={isUploading}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const RestaurantForm = ({
   onSubmit,
   initialData = null,
@@ -70,6 +209,14 @@ const RestaurantForm = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
+  };
+
+  const handleAvatarUpload = (url: string) => {
+    setFormData({ ...formData, avatarImageUrl: url });
+  };
+
+  const handleCoverUpload = (url: string) => {
+    setFormData({ ...formData, coverImageUrl: url });
   };
 
   return (
@@ -114,38 +261,21 @@ const RestaurantForm = ({
           required
         />
       </div>
-      <div>
-        <label
-          htmlFor="avatarImageUrl"
-          className="block text-sm font-medium mb-1"
-        >
-          URL do Avatar
-        </label>
-        <Input
-          id="avatarImageUrl"
-          value={formData.avatarImageUrl}
-          onChange={(e) =>
-            setFormData({ ...formData, avatarImageUrl: e.target.value })
-          }
-          required
-        />
-      </div>
-      <div>
-        <label
-          htmlFor="coverImageUrl"
-          className="block text-sm font-medium mb-1"
-        >
-          URL da Capa
-        </label>
-        <Input
-          id="coverImageUrl"
-          value={formData.coverImageUrl}
-          onChange={(e) =>
-            setFormData({ ...formData, coverImageUrl: e.target.value })
-          }
-          required
-        />
-      </div>
+      
+      <ImageUploadField
+        id="avatarImage"
+        label="Imagem de Avatar"
+        onUpload={handleAvatarUpload}
+        currentImageUrl={formData.avatarImageUrl}
+      />
+      
+      <ImageUploadField
+        id="coverImage"
+        label="Imagem de Capa"
+        onUpload={handleCoverUpload}
+        currentImageUrl={formData.coverImageUrl}
+      />
+      
       <Button type="submit" className="w-full">
         {initialData ? "Atualizar" : "Criar"} Restaurante
       </Button>
