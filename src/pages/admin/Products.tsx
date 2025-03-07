@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, X, Upload, Info } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,12 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import ImageUploadField from "@/components/ImageUploadField";
 
 function generateUUID() {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
@@ -50,137 +45,6 @@ interface Product {
   createdAt: string;
   updatedAt: string;
 }
-
-const ImageUploadField = ({
-  id,
-  label,
-  onUpload,
-  currentImageUrl,
-}: {
-  id: string;
-  label: string;
-  onUpload: (url: string) => void;
-  currentImageUrl: string;
-}) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState(currentImageUrl);
-  const { toast } = useToast();
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      toast({
-        title: "Erro",
-        description: "Apenas arquivos JPEG, JPG, PNG ou WEBP são permitidos.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreviewUrl(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    setIsUploading(true);
-    
-    try {
-      const filename = `products/${Date.now()}-${file.name}`;
-      const { data, error } = await supabase.storage
-        .from('restaurant-images')
-        .upload(filename, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) throw error;
-
-      const { data: urlData } = await supabase.storage
-        .from('restaurant-images')
-        .getPublicUrl(filename);
-
-      onUpload(urlData.publicUrl);
-      
-      toast({
-        title: "Sucesso",
-        description: "Imagem enviada com sucesso!",
-      });
-    } catch (error) {
-      console.error("Erro ao fazer upload:", error);
-      toast({
-        title: "Erro",
-        description: `Erro ao fazer upload: ${(error as Error).message}`,
-        variant: "destructive",
-      });
-      setPreviewUrl(currentImageUrl);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <label htmlFor={id} className="block text-sm font-medium">
-          {label}
-        </label>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-4 w-4 text-muted-foreground" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Aceita imagens nos formatos JPEG, JPG, PNG ou WEBP</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-      
-      <div className="flex flex-col gap-4">
-        {previewUrl && (
-          <div className="relative w-full h-40 bg-muted rounded-md overflow-hidden">
-            <img 
-              src={previewUrl} 
-              alt={label} 
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
-        
-        <div className="flex gap-2">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={triggerFileInput}
-            disabled={isUploading}
-            className="w-full"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            {isUploading ? "Enviando..." : "Escolher Imagem"}
-          </Button>
-          <input
-            ref={fileInputRef}
-            id={id}
-            type="file"
-            accept="image/jpeg,image/jpg,image/png,image/webp"
-            onChange={handleFileChange}
-            className="hidden"
-            disabled={isUploading}
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const Products = () => {
   const { toast } = useToast();
@@ -749,6 +613,7 @@ const Products = () => {
                 label="Imagem do Produto"
                 onUpload={handleImageUpload}
                 currentImageUrl={newProduct.image_url || "https://via.placeholder.com/150"}
+                folder="products"
               />
               
               <div className="space-y-2">
@@ -883,6 +748,7 @@ const Products = () => {
                 label="Imagem do Produto"
                 onUpload={handleEditImageUpload}
                 currentImageUrl={editingProduct.imageUrl || "https://via.placeholder.com/150"}
+                folder="products"
               />
               
               <div className="space-y-2">
