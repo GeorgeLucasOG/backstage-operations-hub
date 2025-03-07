@@ -10,291 +10,165 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
 import ImageUploadField from "@/components/ImageUploadField";
+
+function generateUUID() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 interface Product {
   id: string;
   name: string;
   description: string;
   price: number;
-  categoryId: string;
   imageUrl: string;
+  menuCategoryId: string | null;
+  restaurantId: string;
+  ingredients: string[];
   createdAt: string;
   updatedAt: string;
 }
-
-interface Category {
-  id: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ProductFormData {
-  name: string;
-  description: string;
-  price: number;
-  categoryId: string;
-  imageUrl: string;
-}
-
-function generateUUID() {
-  let dt = new Date().getTime();
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (dt + Math.random() * 16) % 16 | 0;
-    dt = Math.floor(dt / 16);
-    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
-  });
-}
-
-// Update the ProductForm component to include image purpose
-const ProductForm = ({
-  onSubmit,
-  initialData = null,
-  categories,
-}: {
-  onSubmit: (data: ProductFormData) => void;
-  initialData?: Product | null;
-  categories: Category[];
-}) => {
-  const [formData, setFormData] = useState<ProductFormData>(
-    initialData
-      ? {
-          name: initialData.name,
-          description: initialData.description,
-          price: initialData.price,
-          categoryId: initialData.categoryId,
-          imageUrl: initialData.imageUrl,
-        }
-      : {
-          name: "",
-          description: "",
-          price: 0,
-          categoryId: "",
-          imageUrl: "",
-        }
-  );
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  const handleImageUpload = (url: string) => {
-    setFormData((prev) => ({ ...prev, imageUrl: url }));
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="name" className="block text-sm font-medium mb-1">
-          Nome
-        </Label>
-        <Input
-          id="name"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="description" className="block text-sm font-medium mb-1">
-          Descrição
-        </Label>
-        <Input
-          id="description"
-          value={formData.description}
-          onChange={(e) =>
-            setFormData({ ...formData, description: e.target.value })
-          }
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="price" className="block text-sm font-medium mb-1">
-          Preço
-        </Label>
-        <Input
-          id="price"
-          type="number"
-          value={formData.price.toString()}
-          onChange={(e) =>
-            setFormData({ ...formData, price: parseFloat(e.target.value) })
-          }
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="categoryId" className="block text-sm font-medium mb-1">
-          Categoria
-        </Label>
-        <Select
-          onValueChange={(value) =>
-            setFormData({ ...formData, categoryId: value })
-          }
-          defaultValue={formData.categoryId}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione uma categoria" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <ImageUploadField
-        id="productImage"
-        label="Imagem do Produto"
-        onUpload={handleImageUpload}
-        currentImageUrl={formData.imageUrl}
-        folder="products"
-        purpose="products"
-      />
-      
-      <Button type="submit" className="w-full">
-        {initialData ? "Atualizar" : "Criar"} Produto
-      </Button>
-    </form>
-  );
-};
 
 const Products = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    description: "",
+    price: "",
+    image_url: "",
+    category_id: "",
+    ingredients: [] as string[],
+  });
+  const [newIngredient, setNewIngredient] = useState("");
+
+  const { data: restaurantsData } = useQuery({
+    queryKey: ["restaurants"],
+    queryFn: async () => {
+      console.log("Consultando restaurantes disponíveis...");
+
+      const { data, error } = await supabase
+        .from("Restaurant")
+        .select("id, name")
+        .limit(10);
+
+      if (error) {
+        console.error("Erro ao consultar restaurantes:", error);
+        return [];
+      }
+
+      console.log("Restaurantes disponíveis:", data);
+      return data || [];
+    },
+  });
 
   const {
     data: products,
     isLoading,
-    error,
+    refetch,
   } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      console.log("Iniciando busca de produtos...");
+      console.log("Consultando produtos...");
       const { data, error } = await supabase
         .from("Product")
         .select("*")
         .order("createdAt", { ascending: false });
 
       if (error) {
-        console.error("Erro ao buscar produtos:", error);
-        throw error;
+        console.error("Erro ao consultar produtos:", error);
+        throw new Error("Não foi possível carregar os produtos");
       }
 
-      console.log("Produtos encontrados:", data);
+      console.log("Dados de produtos obtidos:", data);
+      if (data && data.length > 0) {
+        console.log(
+          "Exemplo de ingredientes do primeiro produto:",
+          data[0].ingredients
+        );
+        console.log("Tipo dos ingredientes:", typeof data[0].ingredients);
+      }
+
       return data as Product[];
     },
   });
 
-  const { data: categories, isLoading: isCategoriesLoading, error: categoriesError } = useQuery({
+  const { data: categories } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
-      console.log("Iniciando busca de categorias...");
+      console.log(
+        "Consultando categorias do banco de dados na página de Products..."
+      );
       const { data, error } = await supabase
-        .from("Category")
-        .select("*")
-        .order("createdAt", { ascending: false });
+        .from("MenuCategory")
+        .select("*, Restaurant:restaurantId(name)");
 
       if (error) {
-        console.error("Erro ao buscar categorias:", error);
-        throw error;
+        console.error("Erro ao consultar categorias:", error);
+        return [];
       }
 
-      console.log("Categorias encontradas:", data);
-      return data as Category[];
-    },
-  });
-
-  if (error) {
-    console.error("Erro na query:", error);
-    return <div>Erro ao carregar produtos: {(error as Error).message}</div>;
-  }
-
-  if (categoriesError) {
-    console.error("Erro na query de categorias:", categoriesError);
-    return <div>Erro ao carregar categorias: {(categoriesError as Error).message}</div>;
-  }
-
-  const createMutation = useMutation({
-    mutationFn: async (newProduct: ProductFormData) => {
-      console.log("Iniciando criação do produto:", newProduct);
-
-      const id = generateUUID();
-      const now = new Date().toISOString();
-
-      const { data, error } = await supabase
-        .from("Product")
-        .insert([
-          {
-            id,
-            ...newProduct,
-            createdAt: now,
-            updatedAt: now,
-          },
-        ])
-        .select();
-
-      if (error) {
-        console.error("Erro ao criar produto:", error);
-        throw error;
-      }
-
-      console.log("Produto criado com sucesso:", data);
-      return data[0];
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      toast({
-        title: "Sucesso",
-        description: "Produto criado com sucesso!",
-      });
-    },
-    onError: (error) => {
-      console.error("Erro na mutation de criação:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao criar produto: " + error.message,
-        variant: "destructive",
-      });
+      console.log("Categorias obtidas na página de Products:", data);
+      return data || [];
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      ...updateData
-    }: ProductFormData & { id: string }) => {
-      console.log("Iniciando atualização do produto:", id, updateData);
+    mutationFn: async (updatedProduct: {
+      id: string;
+      name: string;
+      description: string;
+      price: number;
+      imageUrl: string;
+      menuCategoryId: string | null;
+      ingredients: string[]; // Array de ingredientes
+    }) => {
+      console.log("Iniciando atualização do produto:", updatedProduct);
+
+      const now = new Date().toISOString();
+
+      // Alguns bancos de dados podem exigir que arrays sejam armazenados como JSON strings
+      // Por padrão, vamos manter como array, pois o Supabase geralmente suporta arrays diretamente
+      console.log("Ingredientes que serão salvos:", updatedProduct.ingredients);
 
       const { data, error } = await supabase
         .from("Product")
         .update({
-          ...updateData,
-          updatedAt: new Date().toISOString(),
+          name: updatedProduct.name,
+          description: updatedProduct.description,
+          price: updatedProduct.price,
+          imageUrl: updatedProduct.imageUrl,
+          menuCategoryId: updatedProduct.menuCategoryId,
+          ingredients: updatedProduct.ingredients, // Salvando os ingredientes
+          updatedAt: now,
         })
-        .eq("id", id)
+        .eq("id", updatedProduct.id)
         .select();
 
       if (error) {
         console.error("Erro ao atualizar produto:", error);
-        throw error;
+        throw new Error(`Erro ao atualizar produto: ${error.message}`);
       }
 
       console.log("Produto atualizado com sucesso:", data);
@@ -302,17 +176,20 @@ const Products = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      setIsEditOpen(false);
       setEditingProduct(null);
       toast({
         title: "Sucesso",
-        description: "Produto atualizado com sucesso!",
+        description:
+          "Produto atualizado com sucesso! Os ingredientes foram salvos.",
       });
     },
     onError: (error) => {
-      console.error("Erro na mutation de atualização:", error);
+      console.error("Erro na atualização:", error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar produto: " + error.message,
+        description:
+          error instanceof Error ? error.message : "Erro ao atualizar produto",
         variant: "destructive",
       });
     },
@@ -326,7 +203,7 @@ const Products = () => {
 
       if (error) {
         console.error("Erro ao excluir produto:", error);
-        throw error;
+        throw new Error(`Erro ao excluir produto: ${error.message}`);
       }
 
       console.log("Produto excluído com sucesso");
@@ -339,16 +216,16 @@ const Products = () => {
       });
     },
     onError: (error) => {
-      console.error("Erro na mutation de exclusão:", error);
+      console.error("Erro na exclusão:", error);
       toast({
         title: "Erro",
-        description: "Erro ao excluir produto: " + error.message,
+        description:
+          error instanceof Error ? error.message : "Erro ao excluir produto",
         variant: "destructive",
       });
     },
   });
 
-<<<<<<< HEAD
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -456,7 +333,7 @@ const Products = () => {
 
       const id = generateUUID();
       const now = new Date().toISOString();
-      
+
       const productPayload = {
         id,
         name: newProduct.name.trim(),
@@ -482,7 +359,7 @@ const Products = () => {
         title: "Produto adicionado",
         description: "O produto foi adicionado com sucesso",
       });
-      
+
       setIsOpen(false);
       setNewProduct({
         name: "",
@@ -492,7 +369,7 @@ const Products = () => {
         category_id: "",
         ingredients: [],
       });
-      
+
       refetch();
     } catch (error) {
       console.error("Erro ao adicionar produto:", error);
@@ -552,11 +429,130 @@ const Products = () => {
     setIsEditOpen(true);
   };
 
-=======
->>>>>>> 64795e36aa737e06290efcb6b485fb7d34545b32
   const handleDelete = (id: string) => {
     if (window.confirm("Tem certeza que deseja excluir este produto?")) {
       deleteMutation.mutate(id);
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!editingProduct) return;
+
+    setIsSubmitting(true);
+
+    try {
+      if (!editingProduct.name.trim()) {
+        throw new Error("O nome do produto é obrigatório");
+      }
+
+      if (isNaN(editingProduct.price) || editingProduct.price <= 0) {
+        throw new Error("O preço deve ser um número válido maior que zero");
+      }
+
+      // Certificar-se de que ingredients é um array não-nulo
+      const ingredients = Array.isArray(editingProduct.ingredients)
+        ? editingProduct.ingredients
+        : [];
+
+      console.log(
+        "Enviando produto para atualização com ingredientes:",
+        ingredients
+      );
+      console.log("Detalhes completos do produto:", editingProduct);
+
+      updateMutation.mutate({
+        id: editingProduct.id,
+        name: editingProduct.name,
+        description: editingProduct.description,
+        price: editingProduct.price,
+        imageUrl: editingProduct.imageUrl || "https://via.placeholder.com/150",
+        menuCategoryId: editingProduct.menuCategoryId,
+        ingredients: ingredients, // Garantindo que é um array válido
+      });
+
+      // Mensagem visual temporária
+      toast({
+        title: "Processando...",
+        description: "Salvando produto e seus ingredientes...",
+      });
+    } catch (error) {
+      console.error("Erro ao processar edição:", error);
+      toast({
+        title: "Erro",
+        description:
+          error instanceof Error ? error.message : "Erro ao atualizar produto",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
+
+    if (!editingProduct) return;
+
+    setEditingProduct((prev) => {
+      if (!prev) return prev;
+
+      if (name === "price") {
+        return { ...prev, [name]: parseFloat(value) || 0 };
+      } else if (name === "category_id") {
+        return { ...prev, menuCategoryId: value || null };
+      } else if (name === "image_url") {
+        return { ...prev, imageUrl: value };
+      } else {
+        return { ...prev, [name]: value };
+      }
+    });
+  };
+
+  const handleImageUpload = (url: string) => {
+    setNewProduct({ ...newProduct, image_url: url });
+  };
+
+  const handleEditImageUpload = (url: string) => {
+    if (editingProduct) {
+      setEditingProduct({
+        ...editingProduct,
+        imageUrl: url
+      });
+    }
+  };
+
+  const getIngredientsDisplay = (
+    ingredients: string[] | string | null | undefined
+  ): string => {
+    if (!ingredients) return "Nenhum ingrediente";
+
+    try {
+      if (Array.isArray(ingredients)) {
+        return ingredients.join(", ");
+      } else if (typeof ingredients === "string") {
+        try {
+          // Tenta converter de JSON se for uma string
+          const parsed = JSON.parse(ingredients);
+          if (Array.isArray(parsed)) {
+            return parsed.join(", ");
+          }
+          return ingredients;
+        } catch (e) {
+          // Se não for um JSON válido, retorna a string como está
+          return ingredients;
+        }
+      }
+      // Se não for nem array nem string, converte para string
+      return String(ingredients);
+    } catch (error) {
+      console.error("Erro ao formatar ingredientes:", error, ingredients);
+      return "Erro ao exibir ingredientes";
     }
   };
 
@@ -564,24 +560,30 @@ const Products = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Produtos</h1>
-        <Sheet>
-          <SheetTrigger asChild>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Produto
             </Button>
-          </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Novo Produto</SheetTitle>
-            </SheetHeader>
-            <div className="mt-4">
-              {categories ? (
-                <ProductForm
-                  categories={categories}
-                  onSubmit={(data) => createMutation.mutate(data)}
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar Novo Produto</DialogTitle>
+              <DialogDescription>
+                Preencha os campos para adicionar um novo produto ao cardápio.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={newProduct.name}
+                  onChange={handleInputChange}
+                  required
                 />
-<<<<<<< HEAD
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição</Label>
@@ -605,16 +607,15 @@ const Products = () => {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="image_url">URL da Imagem</Label>
-                <Input
-                  id="image_url"
-                  name="image_url"
-                  value={newProduct.image_url}
-                  onChange={handleInputChange}
-                  placeholder="https://exemplo.com/imagem.jpg"
-                />
-              </div>
+              
+              <ImageUploadField
+                id="product_image"
+                label="Imagem do Produto"
+                onUpload={handleImageUpload}
+                currentImageUrl={newProduct.image_url || "https://via.placeholder.com/150"}
+                folder="products"
+              />
+              
               <div className="space-y-2">
                 <Label htmlFor="category_id">Categoria</Label>
                 <select
@@ -631,12 +632,12 @@ const Products = () => {
                       name: string;
                       Restaurant?: { name: string };
                     }) => (
-                    <option key={category.id} value={category.id}>
+                      <option key={category.id} value={category.id}>
                         {category.name}{" "}
                         {category.Restaurant
                           ? `(${category.Restaurant.name})`
                           : ""}
-                    </option>
+                      </option>
                     )
                   )}
                 </select>
@@ -697,17 +698,152 @@ const Products = () => {
             </form>
           </DialogContent>
         </Dialog>
-=======
-              ) : (
-                <div>Carregando categorias...</div>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
->>>>>>> 64795e36aa737e06290efcb6b485fb7d34545b32
       </div>
 
-      {isLoading || isCategoriesLoading ? (
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Produto</DialogTitle>
+            <DialogDescription>
+              Edite os campos para atualizar o produto.
+            </DialogDescription>
+          </DialogHeader>
+          {editingProduct && (
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Nome</Label>
+                <Input
+                  id="edit-name"
+                  name="name"
+                  value={editingProduct.name}
+                  onChange={handleEditInputChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Descrição</Label>
+                <Textarea
+                  id="edit-description"
+                  name="description"
+                  value={editingProduct.description}
+                  onChange={handleEditInputChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-price">Preço (R$)</Label>
+                <Input
+                  id="edit-price"
+                  name="price"
+                  type="number"
+                  step="0.01"
+                  value={editingProduct.price}
+                  onChange={handleEditInputChange}
+                  required
+                />
+              </div>
+              
+              <ImageUploadField
+                id="edit_product_image"
+                label="Imagem do Produto"
+                onUpload={handleEditImageUpload}
+                currentImageUrl={editingProduct.imageUrl || "https://via.placeholder.com/150"}
+                folder="products"
+              />
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-category_id">Categoria</Label>
+                <select
+                  id="edit-category_id"
+                  name="category_id"
+                  className="w-full p-2 border rounded"
+                  value={editingProduct.menuCategoryId || ""}
+                  onChange={handleEditInputChange}
+                >
+                  <option value="">Selecione uma categoria</option>
+                  {categories?.map(
+                    (category: {
+                      id: string;
+                      name: string;
+                      Restaurant?: { name: string };
+                    }) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}{" "}
+                        {category.Restaurant
+                          ? `(${category.Restaurant.name})`
+                          : ""}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Ingredientes</Label>
+                <div className="text-xs text-gray-500 mb-2">
+                  Adicione os ingredientes deste produto para melhor informação
+                  ao cliente.
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={newIngredient}
+                    onChange={(e) => setNewIngredient(e.target.value)}
+                    placeholder="Digite um ingrediente"
+                    className="flex-grow"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddIngredient}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Adicionar
+                  </Button>
+                </div>
+                {editingProduct?.ingredients &&
+                editingProduct.ingredients.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mt-2 p-2 border rounded bg-gray-50">
+                    {editingProduct.ingredients.map((ingredient, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-1 bg-white px-2 py-1 rounded border shadow-sm"
+                      >
+                        <span>{ingredient}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveIngredient(index)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-amber-600 mt-2">
+                    Nenhum ingrediente adicionado. Adicione ingredientes para
+                    informar melhor seus clientes.
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {isLoading ? (
         <div>Carregando...</div>
       ) : (
         <div className="border rounded-lg">
@@ -718,6 +854,7 @@ const Products = () => {
                 <TableHead>Nome</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Preço</TableHead>
+                <TableHead>Ingredientes</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -727,7 +864,7 @@ const Products = () => {
                   <TableRow key={product.id}>
                     <TableCell>
                       <img
-                        src={product.imageUrl}
+                        src={getImageUrl(product)}
                         alt={product.name}
                         className="h-12 w-12 object-cover rounded"
                       />
@@ -736,41 +873,45 @@ const Products = () => {
                     <TableCell className="max-w-xs truncate">
                       {product.description}
                     </TableCell>
-                    <TableCell>{product.price}</TableCell>
+                    <TableCell>{formatPrice(product.price)}</TableCell>
+                    <TableCell>
+                      {product.ingredients &&
+                      Array.isArray(product.ingredients) &&
+                      product.ingredients.length > 0 ? (
+                        <div className="max-w-xs">
+                          <div className="flex flex-wrap gap-1">
+                            {product.ingredients
+                              .slice(0, 3)
+                              .map((ingredient, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
+                                >
+                                  {ingredient}
+                                </span>
+                              ))}
+                            {product.ingredients.length > 3 && (
+                              <span className="text-xs text-gray-500">
+                                +{product.ingredients.length - 3} mais
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs italic">
+                          Nenhum ingrediente
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Sheet>
-                          <SheetTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setEditingProduct(product)}
-                            >
-                              Editar
-                            </Button>
-                          </SheetTrigger>
-                          <SheetContent>
-                            <SheetHeader>
-                              <SheetTitle>Editar Produto</SheetTitle>
-                            </SheetHeader>
-                            <div className="mt-4">
-                              {categories ? (
-                                <ProductForm
-                                  initialData={product}
-                                  categories={categories}
-                                  onSubmit={(data) =>
-                                    updateMutation.mutate({
-                                      ...data,
-                                      id: product.id,
-                                    })
-                                  }
-                                />
-                              ) : (
-                                <div>Carregando categorias...</div>
-                              )}
-                            </div>
-                          </SheetContent>
-                        </Sheet>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(product)}
+                        >
+                          Editar
+                        </Button>
                         <Button
                           variant="destructive"
                           size="sm"
@@ -785,8 +926,7 @@ const Products = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-4">
-                    Nenhum produto encontrado. Clique em "Adicionar Produto"
-                    para criar um.
+                    Nenhum produto encontrado
                   </TableCell>
                 </TableRow>
               )}

@@ -17,7 +17,6 @@ interface ImageUploadFieldProps {
   onUpload: (url: string) => void;
   currentImageUrl: string;
   folder?: string;
-  purpose?: 'restaurant/avatar' | 'restaurant/cover' | 'products';
 }
 
 const ImageUploadField = ({
@@ -26,26 +25,11 @@ const ImageUploadField = ({
   onUpload,
   currentImageUrl,
   folder = "",
-  purpose,
 }: ImageUploadFieldProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(currentImageUrl);
   const { toast } = useToast();
-
-  // Determine image dimensions for the UI based on purpose
-  const getDimensionsDisplay = () => {
-    switch (purpose) {
-      case 'restaurant/avatar':
-        return '82 x 82';
-      case 'restaurant/cover':
-        return '390 x 250';
-      case 'products':
-        return '356 x 356';
-      default:
-        return '';
-    }
-  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -89,14 +73,13 @@ const ImageUploadField = ({
       // Now convert to WebP using our edge function
       toast({
         title: "Processando",
-        description: "Convertendo e redimensionando imagem...",
+        description: "Convertendo imagem para WebP para melhor desempenho...",
       });
 
       const response = await supabase.functions.invoke('convert-to-webp', {
         body: { 
           imageUrl: urlData.publicUrl,
-          folder: folder || undefined,
-          purpose: purpose
+          folder: folder || undefined
         }
       });
 
@@ -109,7 +92,7 @@ const ImageUploadField = ({
       
       toast({
         title: "Sucesso",
-        description: "Imagem enviada, otimizada e redimensionada com sucesso!",
+        description: "Imagem enviada e otimizada com sucesso!",
       });
     } catch (error) {
       console.error("Erro ao fazer upload:", error);
@@ -128,8 +111,6 @@ const ImageUploadField = ({
     fileInputRef.current?.click();
   };
 
-  const dimensionsDisplay = getDimensionsDisplay();
-  
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -142,11 +123,7 @@ const ImageUploadField = ({
               <Info className="h-4 w-4 text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent>
-              <p>
-                Aceita imagens nos formatos JPEG, JPG, PNG ou WEBP. 
-                As imagens serão otimizadas automaticamente.
-                {dimensionsDisplay && ` Dimensões: ${dimensionsDisplay} pixels.`}
-              </p>
+              <p>Aceita imagens nos formatos JPEG, JPG, PNG ou WEBP. As imagens serão otimizadas automaticamente.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
