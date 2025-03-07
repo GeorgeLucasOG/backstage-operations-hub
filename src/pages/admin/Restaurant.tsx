@@ -46,7 +46,6 @@ interface RestaurantFormData {
   coverImageUrl: string;
 }
 
-// Função para gerar UUID compatível
 function generateUUID() {
   let dt = new Date().getTime();
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
@@ -76,7 +75,6 @@ const ImageUploadField = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validar o tipo de arquivo
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       toast({
@@ -87,25 +85,25 @@ const ImageUploadField = ({
       return;
     }
 
-    // Mostrar preview da imagem
     const reader = new FileReader();
     reader.onload = (e) => {
       setPreviewUrl(e.target?.result as string);
     };
     reader.readAsDataURL(file);
 
-    // Iniciar upload
     setIsUploading(true);
     
     try {
       const filename = `${Date.now()}-${file.name}`;
       const { data, error } = await supabase.storage
         .from('restaurant-images')
-        .upload(filename, file);
+        .upload(filename, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (error) throw error;
 
-      // Obter URL pública da imagem
       const { data: urlData } = await supabase.storage
         .from('restaurant-images')
         .getPublicUrl(filename);
@@ -123,7 +121,6 @@ const ImageUploadField = ({
         description: `Erro ao fazer upload: ${(error as Error).message}`,
         variant: "destructive",
       });
-      // Restaurar a URL anterior em caso de erro
       setPreviewUrl(currentImageUrl);
     } finally {
       setIsUploading(false);
@@ -322,7 +319,6 @@ const Restaurant = () => {
     mutationFn: async (newRestaurant: RestaurantFormData) => {
       console.log("Iniciando criação do restaurante:", newRestaurant);
 
-      // Gerando um ID único para o novo restaurante usando nossa função personalizada
       const id = generateUUID();
       const now = new Date().toISOString();
 
