@@ -1,24 +1,30 @@
-
 import { useEffect } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
-import { Sidebar, SidebarContent, SidebarHeader, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { 
-  LayoutDashboard, 
-  Coffee, 
-  List, 
-  ShoppingCart, 
-  Store, 
+import {
+  LayoutDashboard,
+  Coffee,
+  List,
+  ShoppingCart,
+  Store,
   LogOut,
   Receipt,
-  DollarSign
+  DollarSign,
+  Settings,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   useEffect(() => {
     const isAuth = localStorage.getItem("isAuthenticated");
     if (!isAuth) {
@@ -37,9 +43,22 @@ const AdminLayout = () => {
     { icon: Coffee, label: "Produtos", path: "/admin/products" },
     { icon: List, label: "Categorias", path: "/admin/menu" },
     { icon: ShoppingCart, label: "Pedidos", path: "/admin/orders" },
-    { icon: Receipt, label: "Contas a Receber", path: "/admin/accounts-receivable" },
-    { icon: DollarSign, label: "Contas a Pagar", path: "/admin/accounts-payable" },
+    {
+      icon: Receipt,
+      label: "Contas a Receber",
+      path: "/admin/accounts-receivable",
+    },
+    {
+      icon: DollarSign,
+      label: "Contas a Pagar",
+      path: "/admin/accounts-payable",
+    },
     { icon: ShoppingCart, label: "Caixa", path: "/admin/cash" },
+    {
+      icon: Settings,
+      label: "Configurações de API",
+      path: "/admin/api-settings",
+    },
   ];
 
   return (
@@ -54,7 +73,9 @@ const AdminLayout = () => {
               {menuItems.map((item) => (
                 <Link key={item.path} to={item.path}>
                   <Button
-                    variant={location.pathname === item.path ? "default" : "ghost"}
+                    variant={
+                      location.pathname === item.path ? "default" : "ghost"
+                    }
                     className="w-full justify-start gap-2"
                   >
                     <item.icon className="h-4 w-4" />

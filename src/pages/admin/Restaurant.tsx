@@ -122,21 +122,25 @@ const RestaurantForm = ({
           required
         />
       </div>
-      
+
       <ImageUploadField
         id="avatarImage"
-        label="Imagem de Avatar"
+        label="Avatar do Restaurante"
         onUpload={handleAvatarUpload}
         currentImageUrl={formData.avatarImageUrl}
+        folder="restaurant"
+        purpose="restaurant-avatar"
       />
-      
+
       <ImageUploadField
         id="coverImage"
         label="Imagem de Capa"
         onUpload={handleCoverUpload}
         currentImageUrl={formData.coverImageUrl}
+        folder="restaurant"
+        purpose="restaurant-cover"
       />
-      
+
       <Button type="submit" className="w-full">
         {initialData ? "Atualizar" : "Criar"} Restaurante
       </Button>

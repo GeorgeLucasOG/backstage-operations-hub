@@ -522,7 +522,7 @@ const Products = () => {
     if (editingProduct) {
       setEditingProduct({
         ...editingProduct,
-        imageUrl: url
+        imageUrl: url,
       });
     }
   };
@@ -607,15 +607,16 @@ const Products = () => {
                   required
                 />
               </div>
-              
+
               <ImageUploadField
-                id="product_image"
+                id="productImage"
                 label="Imagem do Produto"
                 onUpload={handleImageUpload}
-                currentImageUrl={newProduct.image_url || "https://via.placeholder.com/150"}
+                currentImageUrl={newProduct.image_url}
                 folder="products"
+                purpose="product-image"
               />
-              
+
               <div className="space-y-2">
                 <Label htmlFor="category_id">Categoria</Label>
                 <select
@@ -742,15 +743,16 @@ const Products = () => {
                   required
                 />
               </div>
-              
+
               <ImageUploadField
-                id="edit_product_image"
+                id="editProductImage"
                 label="Imagem do Produto"
                 onUpload={handleEditImageUpload}
-                currentImageUrl={editingProduct.imageUrl || "https://via.placeholder.com/150"}
+                currentImageUrl={editingProduct.imageUrl}
                 folder="products"
+                purpose="product-image"
               />
-              
+
               <div className="space-y-2">
                 <Label htmlFor="edit-category_id">Categoria</Label>
                 <select

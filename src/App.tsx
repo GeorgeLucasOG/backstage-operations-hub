@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -17,6 +16,7 @@ import AccountsPayable from "./pages/admin/AccountsPayable";
 import AccountsReceivable from "./pages/admin/AccountsReceivable";
 import Cash from "./pages/admin/Cash";
 import NotFound from "./pages/NotFound";
+import ApiSettings from "./pages/admin/ApiSettings";
 
 // Create a client with error handling configurado para compatibilidade com aplicativos cliente
 const queryClient = new QueryClient({
@@ -48,8 +48,12 @@ const App: React.FC = () => {
                 <Route path="menu" element={<Categories />} />
                 <Route path="orders" element={<Orders />} />
                 <Route path="accounts-payable" element={<AccountsPayable />} />
-                <Route path="accounts-receivable" element={<AccountsReceivable />} />
+                <Route
+                  path="accounts-receivable"
+                  element={<AccountsReceivable />}
+                />
                 <Route path="cash" element={<Cash />} />
+                <Route path="api-settings" element={<ApiSettings />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
