@@ -332,7 +332,7 @@ const Products = () => {
 
       const id = generateUUID();
       const now = new Date().toISOString();
-
+      
       const productPayload = {
         id,
         name: newProduct.name.trim(),
@@ -358,7 +358,7 @@ const Products = () => {
         title: "Produto adicionado",
         description: "O produto foi adicionado com sucesso",
       });
-
+      
       setIsOpen(false);
       setNewProduct({
         name: "",
@@ -368,7 +368,7 @@ const Products = () => {
         category_id: "",
         ingredients: [],
       });
-
+      
       refetch();
     } catch (error) {
       console.error("Erro ao adicionar produto:", error);
@@ -619,12 +619,12 @@ const Products = () => {
                       name: string;
                       Restaurant?: { name: string };
                     }) => (
-                      <option key={category.id} value={category.id}>
+                    <option key={category.id} value={category.id}>
                         {category.name}{" "}
                         {category.Restaurant
                           ? `(${category.Restaurant.name})`
                           : ""}
-                      </option>
+                    </option>
                     )
                   )}
                 </select>
