@@ -15,6 +15,29 @@ const handleCors = (req: Request) => {
   return null;
 };
 
+// Predefined image dimensions for different purposes
+const imageDimensions = {
+  'restaurant/avatar': { width: 82, height: 82 },
+  'restaurant/cover': { width: 390, height: 250 },
+  'products': { width: 356, height: 356 },
+  // Default dimensions if no specific type is matched
+  'default': { width: 800, height: 600 }
+};
+
+// Detect image purpose based on folder path
+const detectImagePurpose = (folder: string, filename: string) => {
+  if (folder === 'restaurant') {
+    // For restaurant avatars and covers, we check if it contains 'avatar' in the filename
+    if (filename.toLowerCase().includes('avatar')) {
+      return 'restaurant/avatar';
+    }
+    return 'restaurant/cover';
+  } else if (folder === 'products' || folder.startsWith('products/')) {
+    return 'products';
+  }
+  return 'default';
+};
+
 serve(async (req: Request) => {
   // Handle CORS
   const corsResponse = handleCors(req);
@@ -27,7 +50,7 @@ serve(async (req: Request) => {
     }
 
     // Parse the request body to get the image URL
-    const { imageUrl, folder } = await req.json();
+    const { imageUrl, folder, purpose } = await req.json();
 
     if (!imageUrl) {
       throw new Error('No image URL provided');
@@ -35,6 +58,14 @@ serve(async (req: Request) => {
 
     console.log('Converting image:', imageUrl);
     console.log('Folder:', folder || 'root');
+    
+    // Determine image purpose and dimensions
+    const filename = imageUrl.split('/').pop().split('?')[0];
+    const imagePurpose = purpose || detectImagePurpose(folder || '', filename);
+    const dimensions = imageDimensions[imagePurpose] || imageDimensions.default;
+    
+    console.log('Detected purpose:', imagePurpose);
+    console.log('Using dimensions:', dimensions);
 
     // Download the original image
     const imageResponse = await fetch(imageUrl);
@@ -64,8 +95,8 @@ serve(async (req: Request) => {
     const importResult = await importResponse.json();
     const importTask = importResult.data.id;
     
-    // Step 2: Convert to WebP
-    const convertResponse = await fetch('https://api.freeconvert.com/v1/process/convert', {
+    // Step 2: Resize the image
+    const resizeResponse = await fetch('https://api.freeconvert.com/v1/process/image/resize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -74,6 +105,30 @@ serve(async (req: Request) => {
       },
       body: JSON.stringify({
         input: importTask,
+        width: dimensions.width,
+        height: dimensions.height,
+        fit: 'cover',
+        position: 'center'
+      })
+    });
+
+    if (!resizeResponse.ok) {
+      throw new Error(`Failed to resize image: ${await resizeResponse.text()}`);
+    }
+
+    const resizeResult = await resizeResponse.json();
+    const resizeTask = resizeResult.data.id;
+    
+    // Step 3: Convert to WebP
+    const convertResponse = await fetch('https://api.freeconvert.com/v1/process/convert', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`
+      },
+      body: JSON.stringify({
+        input: resizeTask,
         input_format: imageUrl.split('.').pop().toLowerCase(),
         output_format: 'webp',
         options: {
@@ -89,7 +144,7 @@ serve(async (req: Request) => {
     const convertResult = await convertResponse.json();
     const convertTask = convertResult.data.id;
     
-    // Step 3: Export the result
+    // Step 4: Export the result
     const exportResponse = await fetch('https://api.freeconvert.com/v1/process/export/url', {
       method: 'POST',
       headers: {
@@ -108,7 +163,7 @@ serve(async (req: Request) => {
 
     const exportResult = await exportResponse.json();
     
-    // Step 4: Wait for the export URL
+    // Step 5: Wait for the export URL
     let exportUrl = null;
     let attempts = 0;
     const maxAttempts = 10;
@@ -144,7 +199,7 @@ serve(async (req: Request) => {
       throw new Error('Failed to get export URL after multiple attempts');
     }
     
-    // Step 5: Download the converted WebP file
+    // Step 6: Download the converted WebP file
     const webpResponse = await fetch(exportUrl);
     if (!webpResponse.ok) {
       throw new Error(`Failed to download converted image: ${webpResponse.statusText}`);
@@ -152,7 +207,7 @@ serve(async (req: Request) => {
     
     const webpBlob = await webpResponse.blob();
     
-    // Step 6: Upload to Supabase storage
+    // Step 7: Upload to Supabase storage
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://rnyjdamaqjxplmpskdry.supabase.co';
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJueWpkYW1hcWp4cGxtcHNrZHJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAyODY0NzAsImV4cCI6MjA1NTg2MjQ3MH0.5SCi-dcxw2qB0zj9-K5OCzF1vRb1Ymb6XCTxG4eeOQg';
     
@@ -186,7 +241,9 @@ serve(async (req: Request) => {
       JSON.stringify({
         success: true,
         publicUrl: urlData.publicUrl,
-        originalUrl: imageUrl
+        originalUrl: imageUrl,
+        dimensions: dimensions,
+        purpose: imagePurpose
       }),
       {
         headers: {

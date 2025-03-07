@@ -128,6 +128,8 @@ const RestaurantForm = ({
         label="Imagem de Avatar"
         onUpload={handleAvatarUpload}
         currentImageUrl={formData.avatarImageUrl}
+        folder="restaurant"
+        purpose="restaurant/avatar"
       />
       
       <ImageUploadField
@@ -135,6 +137,8 @@ const RestaurantForm = ({
         label="Imagem de Capa"
         onUpload={handleCoverUpload}
         currentImageUrl={formData.coverImageUrl}
+        folder="restaurant"
+        purpose="restaurant/cover"
       />
       
       <Button type="submit" className="w-full">
