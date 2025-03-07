@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
+import ImageUploadField from "@/components/ImageUploadField";
 
 interface Restaurant {
   id: string;
@@ -40,7 +41,6 @@ interface RestaurantFormData {
   coverImageUrl: string;
 }
 
-// Função para gerar UUID compatível
 function generateUUID() {
   let dt = new Date().getTime();
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
@@ -70,6 +70,14 @@ const RestaurantForm = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
+  };
+
+  const handleAvatarUpload = (url: string) => {
+    setFormData({ ...formData, avatarImageUrl: url });
+  };
+
+  const handleCoverUpload = (url: string) => {
+    setFormData({ ...formData, coverImageUrl: url });
   };
 
   return (
@@ -114,38 +122,25 @@ const RestaurantForm = ({
           required
         />
       </div>
-      <div>
-        <label
-          htmlFor="avatarImageUrl"
-          className="block text-sm font-medium mb-1"
-        >
-          URL do Avatar
-        </label>
-        <Input
-          id="avatarImageUrl"
-          value={formData.avatarImageUrl}
-          onChange={(e) =>
-            setFormData({ ...formData, avatarImageUrl: e.target.value })
-          }
-          required
-        />
-      </div>
-      <div>
-        <label
-          htmlFor="coverImageUrl"
-          className="block text-sm font-medium mb-1"
-        >
-          URL da Capa
-        </label>
-        <Input
-          id="coverImageUrl"
-          value={formData.coverImageUrl}
-          onChange={(e) =>
-            setFormData({ ...formData, coverImageUrl: e.target.value })
-          }
-          required
-        />
-      </div>
+      
+      <ImageUploadField
+        id="avatarImage"
+        label="Imagem de Avatar"
+        onUpload={handleAvatarUpload}
+        currentImageUrl={formData.avatarImageUrl}
+        folder="restaurant"
+        purpose="restaurant/avatar"
+      />
+      
+      <ImageUploadField
+        id="coverImage"
+        label="Imagem de Capa"
+        onUpload={handleCoverUpload}
+        currentImageUrl={formData.coverImageUrl}
+        folder="restaurant"
+        purpose="restaurant/cover"
+      />
+      
       <Button type="submit" className="w-full">
         {initialData ? "Atualizar" : "Criar"} Restaurante
       </Button>
@@ -192,7 +187,6 @@ const Restaurant = () => {
     mutationFn: async (newRestaurant: RestaurantFormData) => {
       console.log("Iniciando criação do restaurante:", newRestaurant);
 
-      // Gerando um ID único para o novo restaurante usando nossa função personalizada
       const id = generateUUID();
       const now = new Date().toISOString();
 
