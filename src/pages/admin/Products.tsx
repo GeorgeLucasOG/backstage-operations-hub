@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -567,56 +567,78 @@ const Products = () => {
               Adicionar Produto
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[650px] max-h-[85vh] overflow-y-auto p-6">
             <DialogHeader>
-              <DialogTitle>Adicionar Novo Produto</DialogTitle>
-              <DialogDescription>
-                Preencha os campos para adicionar um novo produto ao cardápio.
+              <DialogTitle className="text-xl">
+                Adicionar Novo Produto
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Preencha todos os campos obrigatórios e adicione ingredientes
+                para melhor informação ao cliente.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={newProduct.name}
-                  onChange={handleInputChange}
-                  required
-                />
+            <form onSubmit={handleSubmit} className="space-y-6 py-2 relative">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={newProduct.name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <Label htmlFor="description">Descrição</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    value={newProduct.description}
+                    onChange={handleInputChange}
+                    className="min-h-[100px]"
+                    required
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={newProduct.description}
-                  onChange={handleInputChange}
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price">Preço (R$)</Label>
+                  <Input
+                    id="price"
+                    name="price"
+                    type="number"
+                    step="0.01"
+                    value={newProduct.price}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="productImage">Imagem do Produto</Label>
+                  <div className="flex items-center gap-3">
+                    {newProduct.image_url && (
+                      <div className="h-16 w-16 rounded overflow-hidden bg-gray-100 border flex-shrink-0">
+                        <img
+                          src={newProduct.image_url}
+                          alt="Prévia do produto"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-grow">
+                      <ImageUploadField
+                        id="productImage"
+                        label=""
+                        onUpload={handleImageUpload}
+                        currentImageUrl={newProduct.image_url}
+                        folder="products"
+                        purpose="product-image"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="price">Preço (R$)</Label>
-                <Input
-                  id="price"
-                  name="price"
-                  type="number"
-                  step="0.01"
-                  value={newProduct.price}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <ImageUploadField
-                id="productImage"
-                label="Imagem do Produto"
-                onUpload={handleImageUpload}
-                currentImageUrl={newProduct.image_url}
-                folder="products"
-                purpose="product-image"
-              />
-
               <div className="space-y-2">
                 <Label htmlFor="category_id">Categoria</Label>
                 <select
@@ -643,18 +665,26 @@ const Products = () => {
                   )}
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label>Ingredientes</Label>
-                <div className="text-xs text-gray-500 mb-2">
-                  Adicione os ingredientes deste produto para melhor informação
-                  ao cliente.
+              <div className="space-y-2 col-span-1 md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <Label>Ingredientes</Label>
+                  <span className="text-xs text-muted-foreground">
+                    Adicione os ingredientes deste produto
+                  </span>
                 </div>
+
                 <div className="flex gap-2">
                   <Input
                     value={newIngredient}
                     onChange={(e) => setNewIngredient(e.target.value)}
                     placeholder="Digite um ingrediente"
                     className="flex-grow"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newIngredient.trim()) {
+                        e.preventDefault();
+                        handleAddIngredient();
+                      }
+                    }}
                   />
                   <Button
                     type="button"
@@ -665,7 +695,8 @@ const Products = () => {
                     Adicionar
                   </Button>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-2">
+
+                <div className="flex flex-wrap gap-2 mt-2 max-h-[120px] overflow-y-auto p-2 border rounded-md bg-gray-50">
                   {newProduct.ingredients.map((ingredient, index) => (
                     <div
                       key={index}
@@ -681,9 +712,14 @@ const Products = () => {
                       </button>
                     </div>
                   ))}
+                  {newProduct.ingredients.length === 0 && (
+                    <div className="text-sm text-gray-400 w-full text-center py-2">
+                      Nenhum ingrediente adicionado
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex justify-end space-x-2 pt-4">
+              <div className="sticky bottom-0 pt-4 pb-2 bg-white border-t mt-4 flex justify-end space-x-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -692,6 +728,22 @@ const Products = () => {
                 >
                   Cancelar
                 </Button>
+                {isSubmitting && (
+                  <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg p-6 max-w-md">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
+                        <h3 className="text-lg font-medium">
+                          Salvando produto...
+                        </h3>
+                        <p className="text-sm text-muted-foreground text-center">
+                          Isso pode levar alguns segundos, principalmente se
+                          estiver enviando uma imagem.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? "Salvando..." : "Salvar"}
                 </Button>
@@ -702,57 +754,76 @@ const Products = () => {
       </div>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[650px] max-h-[85vh] overflow-y-auto p-6">
           <DialogHeader>
-            <DialogTitle>Editar Produto</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl">
+              Editar Produto: {editingProduct?.name}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Edite os campos para atualizar o produto.
             </DialogDescription>
           </DialogHeader>
+          {!editingProduct && (
+            <div className="h-[300px] flex items-center justify-center">
+              <div className="flex flex-col items-center text-center gap-2">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <p>Carregando detalhes do produto...</p>
+              </div>
+            </div>
+          )}
           {editingProduct && (
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Nome</Label>
-                <Input
-                  id="edit-name"
-                  name="name"
-                  value={editingProduct.name}
-                  onChange={handleEditInputChange}
-                  required
-                />
+            <form
+              onSubmit={handleEditSubmit}
+              className="space-y-6 py-2 relative"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Nome</Label>
+                  <Input
+                    id="edit-name"
+                    name="name"
+                    value={editingProduct.name}
+                    onChange={handleEditInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <Label htmlFor="edit-description">Descrição</Label>
+                  <Textarea
+                    id="edit-description"
+                    name="description"
+                    value={editingProduct.description}
+                    onChange={handleEditInputChange}
+                    className="min-h-[100px]"
+                    required
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Descrição</Label>
-                <Textarea
-                  id="edit-description"
-                  name="description"
-                  value={editingProduct.description}
-                  onChange={handleEditInputChange}
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-price">Preço (R$)</Label>
+                  <Input
+                    id="edit-price"
+                    name="price"
+                    type="number"
+                    step="0.01"
+                    value={editingProduct.price}
+                    onChange={handleEditInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-image_url">Imagem do Produto</Label>
+                  <ImageUploadField
+                    id="editProductImage"
+                    label="Imagem do Produto"
+                    onUpload={handleEditImageUpload}
+                    currentImageUrl={editingProduct.imageUrl}
+                    folder="products"
+                    purpose="product-image"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-price">Preço (R$)</Label>
-                <Input
-                  id="edit-price"
-                  name="price"
-                  type="number"
-                  step="0.01"
-                  value={editingProduct.price}
-                  onChange={handleEditInputChange}
-                  required
-                />
-              </div>
-
-              <ImageUploadField
-                id="editProductImage"
-                label="Imagem do Produto"
-                onUpload={handleEditImageUpload}
-                currentImageUrl={editingProduct.imageUrl}
-                folder="products"
-                purpose="product-image"
-              />
-
               <div className="space-y-2">
                 <Label htmlFor="edit-category_id">Categoria</Label>
                 <select
@@ -779,18 +850,26 @@ const Products = () => {
                   )}
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label>Ingredientes</Label>
-                <div className="text-xs text-gray-500 mb-2">
-                  Adicione os ingredientes deste produto para melhor informação
-                  ao cliente.
+              <div className="space-y-2 col-span-1 md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <Label>Ingredientes</Label>
+                  <span className="text-xs text-muted-foreground">
+                    Adicione os ingredientes deste produto
+                  </span>
                 </div>
+
                 <div className="flex gap-2">
                   <Input
                     value={newIngredient}
                     onChange={(e) => setNewIngredient(e.target.value)}
                     placeholder="Digite um ingrediente"
                     className="flex-grow"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newIngredient.trim()) {
+                        e.preventDefault();
+                        handleAddIngredient();
+                      }
+                    }}
                   />
                   <Button
                     type="button"
@@ -801,33 +880,32 @@ const Products = () => {
                     Adicionar
                   </Button>
                 </div>
-                {editingProduct?.ingredients &&
-                editingProduct.ingredients.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 mt-2 p-2 border rounded bg-gray-50">
-                    {editingProduct.ingredients.map((ingredient, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-1 bg-white px-2 py-1 rounded border shadow-sm"
+
+                <div className="flex flex-wrap gap-2 mt-2 max-h-[120px] overflow-y-auto p-2 border rounded-md bg-gray-50">
+                  {editingProduct?.ingredients?.map((ingredient, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-1 bg-white px-2 py-1 rounded border shadow-sm"
+                    >
+                      <span>{ingredient}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveIngredient(index)}
+                        className="text-red-500 hover:text-red-700"
                       >
-                        <span>{ingredient}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveIngredient(index)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-amber-600 mt-2">
-                    Nenhum ingrediente adicionado. Adicione ingredientes para
-                    informar melhor seus clientes.
-                  </div>
-                )}
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {(!editingProduct?.ingredients ||
+                    editingProduct.ingredients.length === 0) && (
+                    <div className="text-sm text-gray-400 w-full text-center py-2">
+                      Nenhum ingrediente adicionado
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-end space-x-2 pt-4">
+              <div className="sticky bottom-0 pt-4 pb-2 bg-white border-t mt-4 flex justify-end space-x-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -836,6 +914,22 @@ const Products = () => {
                 >
                   Cancelar
                 </Button>
+                {isSubmitting && (
+                  <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg p-6 max-w-md">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
+                        <h3 className="text-lg font-medium">
+                          Salvando produto...
+                        </h3>
+                        <p className="text-sm text-muted-foreground text-center">
+                          Isso pode levar alguns segundos, principalmente se
+                          estiver enviando uma imagem.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? "Salvando..." : "Salvar Alterações"}
                 </Button>
