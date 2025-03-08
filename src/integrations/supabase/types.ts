@@ -166,103 +166,88 @@ export type Database = {
       CashMovements: {
         Row: {
           amount: number
-          cashRegisterId: string
-          createdAt: string
+          cashregisterid: string
+          createdat: string
           description: string
           id: string
-          orderId: number | null
-          paymentMethod: string
-          restaurantId: string
+          orderid: number | null
+          paymentmethod: string
+          restaurantid: string
           type: string
-          updatedAt: string | null
+          updatedat: string | null
         }
         Insert: {
           amount: number
-          cashRegisterId: string
-          createdAt?: string
+          cashregisterid: string
+          createdat?: string
           description: string
           id?: string
-          orderId?: number | null
-          paymentMethod: string
-          restaurantId: string
+          orderid?: number | null
+          paymentmethod: string
+          restaurantid: string
           type: string
-          updatedAt?: string | null
+          updatedat?: string | null
         }
         Update: {
           amount?: number
-          cashRegisterId?: string
-          createdAt?: string
+          cashregisterid?: string
+          createdat?: string
           description?: string
           id?: string
-          orderId?: number | null
-          paymentMethod?: string
-          restaurantId?: string
+          orderid?: number | null
+          paymentmethod?: string
+          restaurantid?: string
           type?: string
-          updatedAt?: string | null
+          updatedat?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "CashMovements_cashRegisterId_fkey"
-            columns: ["cashRegisterId"]
+            foreignKeyName: "CashMovements_cashregisterid_fkey"
+            columns: ["cashregisterid"]
             isOneToOne: false
             referencedRelation: "CashRegisters"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "CashMovements_restaurantId_fkey"
-            columns: ["restaurantId"]
-            isOneToOne: false
-            referencedRelation: "Restaurant"
             referencedColumns: ["id"]
           },
         ]
       }
       CashRegisters: {
         Row: {
-          closedAt: string | null
-          createdAt: string
-          currentAmount: number
+          closedat: string | null
+          createdat: string
+          currentamount: number
           id: string
-          initialAmount: number
+          initialamount: number
           name: string
-          openedAt: string | null
-          restaurantId: string
+          openedat: string | null
+          restaurantid: string
           status: string
-          updatedAt: string | null
+          updatedat: string | null
         }
         Insert: {
-          closedAt?: string | null
-          createdAt?: string
-          currentAmount: number
+          closedat?: string | null
+          createdat?: string
+          currentamount: number
           id?: string
-          initialAmount: number
+          initialamount: number
           name: string
-          openedAt?: string | null
-          restaurantId: string
+          openedat?: string | null
+          restaurantid: string
           status: string
-          updatedAt?: string | null
+          updatedat?: string | null
         }
         Update: {
-          closedAt?: string | null
-          createdAt?: string
-          currentAmount?: number
+          closedat?: string | null
+          createdat?: string
+          currentamount?: number
           id?: string
-          initialAmount?: number
+          initialamount?: number
           name?: string
-          openedAt?: string | null
-          restaurantId?: string
+          openedat?: string | null
+          restaurantid?: string
           status?: string
-          updatedAt?: string | null
+          updatedat?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "CashRegisters_restaurantId_fkey"
-            columns: ["restaurantId"]
-            isOneToOne: false
-            referencedRelation: "Restaurant"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       Ingredients: {
         Row: {
