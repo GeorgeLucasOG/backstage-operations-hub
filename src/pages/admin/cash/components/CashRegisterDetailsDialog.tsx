@@ -106,7 +106,7 @@ const CashRegisterDetailsDialog = ({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {formatCurrency(selectedCashRegister.initialAmount)}
+                    {formatCurrency(selectedCashRegister.initialamount)}
                   </div>
                 </CardContent>
               </Card>
@@ -117,7 +117,7 @@ const CashRegisterDetailsDialog = ({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {formatCurrency(selectedCashRegister.currentAmount)}
+                    {formatCurrency(selectedCashRegister.currentamount)}
                   </div>
                 </CardContent>
               </Card>
@@ -127,7 +127,7 @@ const CashRegisterDetailsDialog = ({
                   <CardTitle className="text-sm font-medium">Data de Abertura</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-base">{formatDate(selectedCashRegister.openedAt)}</div>
+                  <div className="text-base">{formatDate(selectedCashRegister.openedat)}</div>
                 </CardContent>
               </Card>
               

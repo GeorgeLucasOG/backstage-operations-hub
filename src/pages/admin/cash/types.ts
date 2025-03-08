@@ -2,14 +2,14 @@
 export interface CashRegister {
   id: string;
   name: string;
-  initialAmount: number;
-  currentAmount: number;
+  initialamount: number;
+  currentamount: number;
   status: 'OPEN' | 'CLOSED';
-  restaurantId: string;
-  openedAt: string | null;
-  closedAt: string | null;
-  createdAt: string;
-  updatedAt: string | null;
+  restaurantid: string;
+  openedat: string | null;
+  closedat: string | null;
+  createdat: string;
+  updatedat: string | null;
 }
 
 export interface CashMovement {
@@ -17,12 +17,12 @@ export interface CashMovement {
   description: string;
   amount: number;
   type: 'INCOME' | 'EXPENSE';
-  paymentMethod: string;
-  cashRegisterId: string;
-  restaurantId: string;
-  orderId: number | null;
-  createdAt: string;
-  updatedAt: string | null;
+  paymentmethod: string;
+  cashregisterid: string;
+  restaurantid: string;
+  orderid: number | null;
+  createdat: string;
+  updatedat: string | null;
 }
 
 export type PaymentMethod = 'CASH' | 'CREDIT_CARD' | 'DEBIT_CARD' | 'PIX' | 'OTHER';

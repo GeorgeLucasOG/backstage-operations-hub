@@ -40,7 +40,7 @@ const AddCashMovementDialog = ({
     description: "",
     amount: "",
     type: "INCOME",
-    paymentMethod: "CASH" as PaymentMethod,
+    paymentmethod: "CASH" as PaymentMethod,
   });
 
   const movementMutation = useMutation({
@@ -58,10 +58,10 @@ const AddCashMovementDialog = ({
         description: newMovement.description.trim(),
         amount,
         type: newMovement.type as "INCOME" | "EXPENSE",
-        paymentMethod: newMovement.paymentMethod,
-        cashRegisterId: cashRegister.id,
-        restaurantId: cashRegister.restaurantId,
-        orderId: null,
+        paymentmethod: newMovement.paymentmethod,
+        cashregisterid: cashRegister.id,
+        restaurantid: cashRegister.restaurantid,
+        orderid: null,
       });
     },
     onSuccess: () => {
@@ -74,7 +74,7 @@ const AddCashMovementDialog = ({
         description: "",
         amount: "",
         type: "INCOME",
-        paymentMethod: "CASH",
+        paymentmethod: "CASH",
       });
       toast({
         title: "Sucesso",
@@ -176,11 +176,11 @@ const AddCashMovementDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
+            <Label htmlFor="paymentmethod">Forma de Pagamento</Label>
             <Select
-              value={newMovement.paymentMethod}
+              value={newMovement.paymentmethod}
               onValueChange={(value) =>
-                handleSelectChange("paymentMethod", value)
+                handleSelectChange("paymentmethod", value)
               }
             >
               <SelectTrigger>

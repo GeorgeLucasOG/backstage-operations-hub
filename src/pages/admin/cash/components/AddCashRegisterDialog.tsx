@@ -8,13 +8,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Plus } from "lucide-react";
 
 interface AddCashRegisterDialogProps {
   onSuccess?: () => void;
@@ -23,36 +22,32 @@ interface AddCashRegisterDialogProps {
 const AddCashRegisterDialog = ({ onSuccess }: AddCashRegisterDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
-  const [newCashRegister, setNewCashRegister] = useState({
-    name: "",
-    initialAmount: "",
-  });
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [initialAmount, setInitialAmount] = useState("");
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      if (!newCashRegister.name.trim()) {
+      if (!name.trim()) {
         throw new Error("O nome do caixa é obrigatório");
       }
 
-      const initialAmount = parseFloat(newCashRegister.initialAmount);
-      if (isNaN(initialAmount)) {
-        throw new Error("O valor inicial deve ser um número válido");
+      const amount = parseFloat(initialAmount);
+      if (isNaN(amount) || amount < 0) {
+        throw new Error("O valor inicial deve ser um número válido maior ou igual a zero");
       }
 
-      return createCashRegister(
-        newCashRegister.name.trim(),
-        initialAmount
-      );
+      return createCashRegister(name.trim(), amount);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashRegisters"] });
-      setIsOpen(false);
-      setNewCashRegister({ name: "", initialAmount: "" });
       toast({
         title: "Sucesso",
         description: "Caixa criado com sucesso!",
       });
+      setOpen(false);
+      setName("");
+      setInitialAmount("");
       onSuccess?.();
     },
     onError: (error) => {
@@ -65,69 +60,55 @@ const AddCashRegisterDialog = ({ onSuccess }: AddCashRegisterDialogProps) => {
     },
   });
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const { name, value } = e.target;
-    setNewCashRegister((prev) => ({ ...prev, [name]: value }));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createMutation.mutate();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Caixa
+          <PlusCircle className="h-4 w-4 mr-2" />
+          Novo Caixa
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Caixa</DialogTitle>
-          <DialogDescription>
-            Preencha os campos para adicionar um novo caixa.
-          </DialogDescription>
+          <DialogTitle>Criar Novo Caixa</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome</Label>
+            <Label htmlFor="name">Nome do Caixa</Label>
             <Input
               id="name"
-              name="name"
-              value={newCashRegister.name}
-              onChange={handleInputChange}
-              placeholder="Nome do caixa"
-              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Caixa Principal"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="initialAmount">Valor Inicial (R$)</Label>
             <Input
               id="initialAmount"
-              name="initialAmount"
               type="number"
               step="0.01"
-              value={newCashRegister.initialAmount}
-              onChange={handleInputChange}
+              value={initialAmount}
+              onChange={(e) => setInitialAmount(e.target.value)}
               placeholder="0.00"
-              required
             />
           </div>
           <div className="flex justify-end space-x-2 pt-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() => setIsOpen(false)}
+              onClick={() => setOpen(false)}
               disabled={createMutation.isPending}
             >
               Cancelar
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Salvando..." : "Salvar"}
+              {createMutation.isPending ? "Criando..." : "Criar Caixa"}
             </Button>
           </div>
         </form>

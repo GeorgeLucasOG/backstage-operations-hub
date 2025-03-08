@@ -610,7 +610,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_new_amount: {
+        Args: {
+          register_id: string
+          amount: number
+          is_income: boolean
+        }
+        Returns: number
+      }
     }
     Enums: {
       ConsumptionMethod: "TAKEAWAY" | "DINE_IN"

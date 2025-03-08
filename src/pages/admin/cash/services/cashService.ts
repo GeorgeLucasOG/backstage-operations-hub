@@ -7,7 +7,7 @@ export const fetchCashRegisters = async (): Promise<CashRegister[]> => {
   const { data, error } = await supabase
     .from("CashRegisters")
     .select("*")
-    .order("createdAt", { ascending: false });
+    .order("createdat", { ascending: false });
 
   if (error) {
     console.error("Error fetching cash registers:", error);
@@ -26,11 +26,11 @@ export const createCashRegister = async (
     .insert([
       {
         name,
-        initialAmount,
-        currentAmount: initialAmount,
+        initialamount: initialAmount,
+        currentamount: initialAmount,
         status: "OPEN",
-        restaurantId: DEFAULT_RESTAURANT_ID,
-        openedAt: new Date().toISOString(),
+        restaurantid: DEFAULT_RESTAURANT_ID,
+        openedat: new Date().toISOString(),
       },
     ])
     .select();
@@ -48,7 +48,7 @@ export const closeCashRegister = async (id: string): Promise<CashRegister> => {
     .from("CashRegisters")
     .update({
       status: "CLOSED",
-      closedAt: new Date().toISOString(),
+      closedat: new Date().toISOString(),
     })
     .eq("id", id)
     .select();
@@ -66,8 +66,8 @@ export const fetchCashMovements = async (cashRegisterId: string): Promise<CashMo
   const { data, error } = await supabase
     .from("CashMovements")
     .select("*")
-    .eq("cashRegisterId", cashRegisterId)
-    .order("createdAt", { ascending: false });
+    .eq("cashregisterid", cashRegisterId)
+    .order("createdat", { ascending: false });
 
   if (error) {
     console.error("Error fetching cash movements:", error);
@@ -78,14 +78,19 @@ export const fetchCashMovements = async (cashRegisterId: string): Promise<CashMo
 };
 
 export const createCashMovement = async (
-  movement: Omit<CashMovement, 'id' | 'createdAt' | 'updatedAt'>
+  movement: {
+    description: string;
+    amount: number;
+    type: 'INCOME' | 'EXPENSE';
+    paymentmethod: string;
+    cashregisterid: string;
+    restaurantid: string;
+    orderid: number | null;
+  }
 ): Promise<CashMovement> => {
   const { data, error } = await supabase
     .from("CashMovements")
-    .insert([{
-      ...movement,
-      restaurantId: DEFAULT_RESTAURANT_ID,
-    }])
+    .insert([movement])
     .select();
 
   if (error) {
@@ -97,13 +102,13 @@ export const createCashMovement = async (
   const { error: updateError } = await supabase
     .from("CashRegisters")
     .update({
-      currentAmount: supabase.rpc("calculate_new_amount", {
-        register_id: movement.cashRegisterId,
+      currentamount: supabase.rpc("calculate_new_amount", {
+        register_id: movement.cashregisterid,
         amount: movement.amount,
         is_income: movement.type === "INCOME"
       })
     })
-    .eq("id", movement.cashRegisterId);
+    .eq("id", movement.cashregisterid);
 
   if (updateError) {
     console.error("Error updating cash register balance:", updateError);

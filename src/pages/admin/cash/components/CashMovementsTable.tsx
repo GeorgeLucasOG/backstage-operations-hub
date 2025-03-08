@@ -66,8 +66,8 @@ const CashMovementsTable = ({ cashMovements, isLoading }: CashMovementsTableProp
               <TableCell className={getMovementTypeColor(movement.type)}>
                 {movement.type === "INCOME" ? "+" : "-"}{formatCurrency(movement.amount)}
               </TableCell>
-              <TableCell>{getPaymentMethodLabel(movement.paymentMethod)}</TableCell>
-              <TableCell>{formatDate(movement.createdAt)}</TableCell>
+              <TableCell>{getPaymentMethodLabel(movement.paymentmethod)}</TableCell>
+              <TableCell>{formatDate(movement.createdat)}</TableCell>
             </TableRow>
           ))}
         </TableBody>
