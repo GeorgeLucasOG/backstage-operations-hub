@@ -14,6 +14,7 @@ const Cash = () => {
   const { data: cashRegisters, isLoading, refetch } = useQuery({
     queryKey: ["cashRegisters"],
     queryFn: async () => {
+      // Ensure we're using the correct case for the table name
       const { data, error } = await supabase
         .from("CashRegisters")
         .select("*")

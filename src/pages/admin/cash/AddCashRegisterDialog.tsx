@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DEFAULT_RESTAURANT_ID } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,7 @@ const AddCashRegisterDialog = ({ onSuccess }: AddCashRegisterDialogProps) => {
     mutationFn: async (newCashRegister: { name: string; initialAmount: number }) => {
       console.log("Iniciando criação de caixa:", newCashRegister);
 
+      // Ensure we're using the correct case for the table name
       const { data, error } = await supabase
         .from("CashRegisters")
         .insert([
@@ -42,7 +43,7 @@ const AddCashRegisterDialog = ({ onSuccess }: AddCashRegisterDialogProps) => {
             initialAmount: newCashRegister.initialAmount,
             currentAmount: newCashRegister.initialAmount,
             status: "OPEN",
-            restaurantId: "d2d5278d-8df1-4819-87a0-f23b519e3f2a", // Substitua pelo ID do restaurante atual
+            restaurantId: DEFAULT_RESTAURANT_ID,
             openedAt: new Date().toISOString(),
           },
         ])
@@ -171,7 +172,7 @@ const AddCashRegisterDialog = ({ onSuccess }: AddCashRegisterDialogProps) => {
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Salvar" : "Salvar"}
+              {isSubmitting ? "Salvando..." : "Salvar"}
             </Button>
           </div>
         </form>

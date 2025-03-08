@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -31,6 +30,7 @@ const CashRegisterDetailsDialog = ({
     queryFn: async () => {
       if (!selectedCashRegister) return [];
       
+      // Ensure we're using the correct case for the table name
       const { data, error } = await supabase
         .from("CashMovements")
         .select("*")
