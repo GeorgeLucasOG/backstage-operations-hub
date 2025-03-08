@@ -514,17 +514,35 @@ const Products = () => {
     });
   };
 
-  const handleImageUpload = (url: string) => {
-    setNewProduct({ ...newProduct, image_url: url });
+  const handleAddEditIngredient = () => {
+    if (!newIngredient.trim() || !editingProduct) return;
+
+    setEditingProduct({
+      ...editingProduct,
+      ingredients: [...(editingProduct.ingredients || []), newIngredient],
+    });
+    setNewIngredient("");
   };
 
-  const handleEditImageUpload = (url: string) => {
-    if (editingProduct) {
-      setEditingProduct({
-        ...editingProduct,
-        imageUrl: url,
-      });
-    }
+  const handleRemoveEditIngredient = (index: number) => {
+    if (!editingProduct) return;
+
+    const newIngredients = [...editingProduct.ingredients];
+    newIngredients.splice(index, 1);
+
+    setEditingProduct({
+      ...editingProduct,
+      ingredients: newIngredients,
+    });
+  };
+
+  const handleUpdateImageUrl = (url: string) => {
+    if (!editingProduct) return;
+
+    setEditingProduct({
+      ...editingProduct,
+      imageUrl: url,
+    });
   };
 
   const getIngredientsDisplay = (
@@ -557,17 +575,18 @@ const Products = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 px-2 sm:px-4 md:px-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">Produtos</h1>
+
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Produto
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[650px] max-h-[85vh] overflow-y-auto p-6">
+          <DialogContent className="sm:max-w-[650px] max-h-[85vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle className="text-xl">
                 Adicionar Novo Produto
@@ -577,175 +596,169 @@ const Products = () => {
                 para melhor informação ao cliente.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-6 py-2 relative">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome</Label>
+                  <Label htmlFor="name">Nome do Produto *</Label>
                   <Input
                     id="name"
                     name="name"
                     value={newProduct.name}
                     onChange={handleInputChange}
+                    placeholder="Ex: Pizza Margherita"
                     required
+                    className="w-full"
                   />
                 </div>
-                <div className="space-y-2 col-span-1 md:col-span-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={newProduct.description}
-                    onChange={handleInputChange}
-                    className="min-h-[100px]"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                 <div className="space-y-2">
-                  <Label htmlFor="price">Preço (R$)</Label>
+                  <Label htmlFor="price">Preço (R$) *</Label>
                   <Input
                     id="price"
                     name="price"
                     type="number"
                     step="0.01"
+                    min="0"
                     value={newProduct.price}
                     onChange={handleInputChange}
+                    placeholder="Ex: 29.90"
                     required
+                    className="w-full"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={newProduct.description}
+                  onChange={handleInputChange}
+                  placeholder="Descreva o produto..."
+                  className="w-full min-h-[80px]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="productImage">Imagem do Produto</Label>
-                  <div className="flex items-center gap-3">
-                    {newProduct.image_url && (
-                      <div className="h-16 w-16 rounded overflow-hidden bg-gray-100 border flex-shrink-0">
-                        <img
-                          src={newProduct.image_url}
-                          alt="Prévia do produto"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="flex-grow">
-                      <ImageUploadField
-                        id="productImage"
-                        label=""
-                        onUpload={handleImageUpload}
-                        currentImageUrl={newProduct.image_url}
-                        folder="products"
-                        purpose="product-image"
-                      />
-                    </div>
+                  <Label htmlFor="category_id">Categoria</Label>
+                  <select
+                    id="category_id"
+                    name="category_id"
+                    value={newProduct.category_id}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-input text-sm"
+                  >
+                    <option value="">Selecione uma categoria</option>
+                    {categories?.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name} - {category.Restaurant?.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="image_url">Imagem do Produto</Label>
+                  <div className="mt-1">
+                    <ImageUploadField
+                      id="productImage"
+                      label=""
+                      onUpload={(url) => {
+                        setNewProduct({ ...newProduct, image_url: url });
+                      }}
+                      currentImageUrl={newProduct.image_url}
+                      folder="products"
+                      purpose="product-image"
+                    />
                   </div>
                 </div>
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="category_id">Categoria</Label>
-                <select
-                  id="category_id"
-                  name="category_id"
-                  className="w-full p-2 border rounded"
-                  value={newProduct.category_id}
-                  onChange={(e) => handleInputChange(e)}
-                >
-                  <option value="">Selecione uma categoria</option>
-                  {categories?.map(
-                    (category: {
-                      id: string;
-                      name: string;
-                      Restaurant?: { name: string };
-                    }) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}{" "}
-                        {category.Restaurant
-                          ? `(${category.Restaurant.name})`
-                          : ""}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-              <div className="space-y-2 col-span-1 md:col-span-2">
                 <div className="flex items-center justify-between">
-                  <Label>Ingredientes</Label>
+                  <Label htmlFor="ingredients">Ingredientes</Label>
                   <span className="text-xs text-muted-foreground">
-                    Adicione os ingredientes deste produto
+                    Adicione os ingredientes para informar ao cliente
                   </span>
                 </div>
-
                 <div className="flex gap-2">
                   <Input
+                    id="newIngredient"
                     value={newIngredient}
                     onChange={(e) => setNewIngredient(e.target.value)}
-                    placeholder="Digite um ingrediente"
-                    className="flex-grow"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && newIngredient.trim()) {
-                        e.preventDefault();
-                        handleAddIngredient();
-                      }
-                    }}
+                    placeholder="Ex: Tomate"
                   />
                   <Button
                     type="button"
-                    onClick={handleAddIngredient}
                     variant="outline"
-                    size="sm"
+                    onClick={handleAddIngredient}
+                    disabled={!newIngredient.trim()}
                   >
                     Adicionar
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap gap-2 mt-2 max-h-[120px] overflow-y-auto p-2 border rounded-md bg-gray-50">
-                  {newProduct.ingredients.map((ingredient, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded"
-                    >
-                      <span>{ingredient}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveIngredient(index)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                <div className="mt-2">
+                  {newProduct.ingredients.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 mt-2 p-2 bg-muted/20 rounded">
+                      {newProduct.ingredients.map((ingredient, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-1 px-2 py-1 bg-muted rounded-full"
+                        >
+                          <span className="text-sm">{ingredient}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveIngredient(index)}
+                            className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-muted-foreground/20 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  {newProduct.ingredients.length === 0 && (
-                    <div className="text-sm text-gray-400 w-full text-center py-2">
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
                       Nenhum ingrediente adicionado
-                    </div>
+                    </p>
                   )}
                 </div>
               </div>
-              <div className="sticky bottom-0 pt-4 pb-2 bg-white border-t mt-4 flex justify-end space-x-2">
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-end pt-4 border-t">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsOpen(false)}
-                  disabled={isSubmitting}
+                  onClick={() => {
+                    setIsOpen(false);
+                    setNewProduct({
+                      name: "",
+                      description: "",
+                      price: "",
+                      image_url: "",
+                      category_id: "",
+                      ingredients: [],
+                    });
+                  }}
+                  className="w-full sm:w-auto order-2 sm:order-1"
                 >
                   Cancelar
                 </Button>
-                {isSubmitting && (
-                  <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg shadow-lg p-6 max-w-md">
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
-                        <h3 className="text-lg font-medium">
-                          Salvando produto...
-                        </h3>
-                        <p className="text-sm text-muted-foreground text-center">
-                          Isso pode levar alguns segundos, principalmente se
-                          estiver enviando uma imagem.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Salvando..." : "Salvar"}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto order-1 sm:order-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>Salvar Produto</>
+                  )}
                 </Button>
               </div>
             </form>
@@ -753,14 +766,193 @@ const Products = () => {
         </Dialog>
       </div>
 
+      {isLoading ? (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="bg-white rounded-md shadow overflow-hidden">
+          {/* Versão para desktop - escondida em telas pequenas */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Imagem</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Preço</TableHead>
+                  <TableHead>Ingredientes</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products && products.length > 0 ? (
+                  products.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <img
+                          src={getImageUrl(product)}
+                          alt={product.name}
+                          className="h-12 w-12 object-cover rounded"
+                        />
+                      </TableCell>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {product.description}
+                      </TableCell>
+                      <TableCell>{formatPrice(product.price)}</TableCell>
+                      <TableCell>
+                        {product.ingredients &&
+                        Array.isArray(product.ingredients) &&
+                        product.ingredients.length > 0 ? (
+                          <div className="max-w-xs">
+                            <div className="flex flex-wrap gap-1">
+                              {product.ingredients
+                                .slice(0, 3)
+                                .map((ingredient, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                                  >
+                                    {ingredient}
+                                  </span>
+                                ))}
+                              {product.ingredients.length > 3 && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted">
+                                  +{product.ingredients.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            Sem ingredientes
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(product)}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDelete(product.id)}
+                          >
+                            Excluir
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-4">
+                      Nenhum produto encontrado
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Layout responsivo para mobile - visível apenas em telas pequenas */}
+          <div className="md:hidden">
+            {products && products.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 p-4">
+                {products.map((product) => (
+                  <div
+                    key={product.id}
+                    className="bg-muted/20 p-4 rounded-lg shadow-sm"
+                  >
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={getImageUrl(product)}
+                        alt={product.name}
+                        className="h-16 w-16 object-cover rounded-md flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium truncate">{product.name}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {product.description}
+                        </p>
+                        <div className="mt-1 text-sm font-medium">
+                          {formatPrice(product.price)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {product.ingredients &&
+                      Array.isArray(product.ingredients) &&
+                      product.ingredients.length > 0 && (
+                        <div className="mt-3">
+                          <h4 className="text-xs font-medium text-muted-foreground mb-1">
+                            Ingredientes:
+                          </h4>
+                          <div className="flex flex-wrap gap-1">
+                            {product.ingredients
+                              .slice(0, 3)
+                              .map((ingredient, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                                >
+                                  {ingredient}
+                                </span>
+                              ))}
+                            {product.ingredients.length > 3 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted">
+                                +{product.ingredients.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                    <div className="mt-3 flex gap-2 justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(product)}
+                        className="text-xs px-2.5 py-1 h-8"
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(product.id)}
+                        className="text-xs px-2.5 py-1 h-8"
+                      >
+                        Excluir
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 px-4">
+                <p className="text-muted-foreground">
+                  Nenhum produto encontrado
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Dialog para editar produto - tornando mais responsivo */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-[650px] max-h-[85vh] overflow-y-auto p-6">
+        <DialogContent className="sm:max-w-[650px] max-h-[85vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="text-xl">
-              Editar Produto: {editingProduct?.name}
-            </DialogTitle>
+            <DialogTitle className="text-xl">Editar Produto</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Edite os campos para atualizar o produto.
+              Atualize as informações do produto, incluindo ingredientes.
             </DialogDescription>
           </DialogHeader>
           {!editingProduct && (
@@ -772,264 +964,185 @@ const Products = () => {
             </div>
           )}
           {editingProduct && (
-            <form
-              onSubmit={handleEditSubmit}
-              className="space-y-6 py-2 relative"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleEditSubmit} className="space-y-6 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-name">Nome</Label>
+                  <Label htmlFor="edit-name">Nome do Produto *</Label>
                   <Input
                     id="edit-name"
                     name="name"
                     value={editingProduct.name}
                     onChange={handleEditInputChange}
+                    placeholder="Nome do produto"
                     required
+                    className="w-full"
                   />
                 </div>
-                <div className="space-y-2 col-span-1 md:col-span-2">
-                  <Label htmlFor="edit-description">Descrição</Label>
-                  <Textarea
-                    id="edit-description"
-                    name="description"
-                    value={editingProduct.description}
-                    onChange={handleEditInputChange}
-                    className="min-h-[100px]"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                 <div className="space-y-2">
-                  <Label htmlFor="edit-price">Preço (R$)</Label>
+                  <Label htmlFor="edit-price">Preço (R$) *</Label>
                   <Input
                     id="edit-price"
                     name="price"
                     type="number"
                     step="0.01"
+                    min="0"
                     value={editingProduct.price}
                     onChange={handleEditInputChange}
+                    placeholder="0.00"
                     required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-image_url">Imagem do Produto</Label>
-                  <ImageUploadField
-                    id="editProductImage"
-                    label="Imagem do Produto"
-                    onUpload={handleEditImageUpload}
-                    currentImageUrl={editingProduct.imageUrl}
-                    folder="products"
-                    purpose="product-image"
+                    className="w-full"
                   />
                 </div>
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="edit-category_id">Categoria</Label>
-                <select
-                  id="edit-category_id"
-                  name="category_id"
-                  className="w-full p-2 border rounded"
-                  value={editingProduct.menuCategoryId || ""}
+                <Label htmlFor="edit-description">Descrição</Label>
+                <Textarea
+                  id="edit-description"
+                  name="description"
+                  value={editingProduct.description}
                   onChange={handleEditInputChange}
-                >
-                  <option value="">Selecione uma categoria</option>
-                  {categories?.map(
-                    (category: {
-                      id: string;
-                      name: string;
-                      Restaurant?: { name: string };
-                    }) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}{" "}
-                        {category.Restaurant
-                          ? `(${category.Restaurant.name})`
-                          : ""}
-                      </option>
-                    )
-                  )}
-                </select>
+                  placeholder="Descrição do produto"
+                  className="w-full min-h-[80px]"
+                />
               </div>
-              <div className="space-y-2 col-span-1 md:col-span-2">
-                <div className="flex items-center justify-between">
-                  <Label>Ingredientes</Label>
-                  <span className="text-xs text-muted-foreground">
-                    Adicione os ingredientes deste produto
-                  </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-category">Categoria</Label>
+                  <select
+                    id="edit-category"
+                    name="menuCategoryId"
+                    value={editingProduct.menuCategoryId || ""}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-input text-sm"
+                  >
+                    <option value="">Sem categoria</option>
+                    {categories?.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name} - {category.Restaurant?.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="edit-image">Imagem do Produto</Label>
+                  <div className="mt-1 flex items-center gap-3">
+                    {editingProduct.imageUrl && (
+                      <div className="relative w-16 h-16 group">
+                        <img
+                          src={editingProduct.imageUrl}
+                          alt={editingProduct.name}
+                          className="w-16 h-16 object-cover rounded-md"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateImageUrl("")}
+                            className="bg-destructive text-white p-1 rounded-full"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <ImageUploadField
+                      id="editProductImage"
+                      label=""
+                      onUpload={handleUpdateImageUrl}
+                      currentImageUrl={editingProduct.imageUrl}
+                      folder="products"
+                      purpose="product-image"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="edit-ingredients">Ingredientes</Label>
+                  <span className="text-xs text-muted-foreground">
+                    Atualize os ingredientes para informar ao cliente
+                  </span>
+                </div>
                 <div className="flex gap-2">
                   <Input
+                    id="edit-new-ingredient"
                     value={newIngredient}
                     onChange={(e) => setNewIngredient(e.target.value)}
-                    placeholder="Digite um ingrediente"
-                    className="flex-grow"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && newIngredient.trim()) {
-                        e.preventDefault();
-                        handleAddIngredient();
-                      }
-                    }}
+                    placeholder="Novo ingrediente"
                   />
                   <Button
                     type="button"
-                    onClick={handleAddIngredient}
                     variant="outline"
-                    size="sm"
+                    onClick={handleAddEditIngredient}
+                    disabled={!newIngredient.trim()}
                   >
                     Adicionar
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap gap-2 mt-2 max-h-[120px] overflow-y-auto p-2 border rounded-md bg-gray-50">
-                  {editingProduct?.ingredients?.map((ingredient, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-1 bg-white px-2 py-1 rounded border shadow-sm"
-                    >
-                      <span>{ingredient}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveIngredient(index)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                <div className="mt-2">
+                  {editingProduct.ingredients &&
+                  editingProduct.ingredients.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 mt-2 p-2 bg-muted/20 rounded">
+                      {editingProduct.ingredients.map((ingredient, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-1 px-2 py-1 bg-muted rounded-full"
+                        >
+                          <span className="text-sm">{ingredient}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveEditIngredient(index)}
+                            className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-muted-foreground/20 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  {(!editingProduct?.ingredients ||
-                    editingProduct.ingredients.length === 0) && (
-                    <div className="text-sm text-gray-400 w-full text-center py-2">
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
                       Nenhum ingrediente adicionado
-                    </div>
+                    </p>
                   )}
                 </div>
               </div>
-              <div className="sticky bottom-0 pt-4 pb-2 bg-white border-t mt-4 flex justify-end space-x-2">
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-end pt-4 border-t">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsEditOpen(false)}
-                  disabled={isSubmitting}
+                  onClick={() => {
+                    setIsEditOpen(false);
+                    setEditingProduct(null);
+                  }}
+                  className="w-full sm:w-auto order-2 sm:order-1"
                 >
                   Cancelar
                 </Button>
-                {isSubmitting && (
-                  <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg shadow-lg p-6 max-w-md">
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
-                        <h3 className="text-lg font-medium">
-                          Salvando produto...
-                        </h3>
-                        <p className="text-sm text-muted-foreground text-center">
-                          Isso pode levar alguns segundos, principalmente se
-                          estiver enviando uma imagem.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto order-1 sm:order-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Atualizando...
+                    </>
+                  ) : (
+                    <>Atualizar Produto</>
+                  )}
                 </Button>
               </div>
             </form>
           )}
         </DialogContent>
       </Dialog>
-
-      {isLoading ? (
-        <div>Carregando...</div>
-      ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Imagem</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Preço</TableHead>
-                <TableHead>Ingredientes</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products && products.length > 0 ? (
-                products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <img
-                        src={getImageUrl(product)}
-                        alt={product.name}
-                        className="h-12 w-12 object-cover rounded"
-                      />
-                    </TableCell>
-                    <TableCell>{product.name}</TableCell>
-                    <TableCell className="max-w-xs truncate">
-                      {product.description}
-                    </TableCell>
-                    <TableCell>{formatPrice(product.price)}</TableCell>
-                    <TableCell>
-                      {product.ingredients &&
-                      Array.isArray(product.ingredients) &&
-                      product.ingredients.length > 0 ? (
-                        <div className="max-w-xs">
-                          <div className="flex flex-wrap gap-1">
-                            {product.ingredients
-                              .slice(0, 3)
-                              .map((ingredient, idx) => (
-                                <span
-                                  key={idx}
-                                  className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
-                                >
-                                  {ingredient}
-                                </span>
-                              ))}
-                            {product.ingredients.length > 3 && (
-                              <span className="text-xs text-gray-500">
-                                +{product.ingredients.length - 3} mais
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 text-xs italic">
-                          Nenhum ingrediente
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(product)}
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(product.id)}
-                        >
-                          Excluir
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4">
-                    Nenhum produto encontrado
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
     </div>
   );
 };
