@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -9,9 +8,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, XSquare } from "lucide-react";
+import { Eye, XSquare, AlertCircle } from "lucide-react";
 import { CashRegister } from "../types";
 import { formatCurrency, formatDate } from "../utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CashRegistersTableProps {
   cashRegisters: CashRegister[];
@@ -26,20 +27,39 @@ const CashRegistersTable = ({
   onViewDetails,
   onCloseCashRegister,
 }: CashRegistersTableProps) => {
-  if (isLoading) {
-    return <div className="text-center py-4">Carregando caixas...</div>;
-  }
+  // Log para debug
+  console.log(
+    `Renderizando tabela de caixas. Total: ${cashRegisters?.length || 0}`
+  );
 
-  if (!cashRegisters || cashRegisters.length === 0) {
+  if (isLoading) {
     return (
-      <div className="text-center py-4 text-gray-500">
-        Nenhum caixa encontrado. Use o botão acima para criar um novo caixa.
+      <div className="border rounded-lg p-4">
+        <div className="flex items-center space-x-4 mb-4">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-[250px]" />
+            <Skeleton className="h-4 w-[200px]" />
+          </div>
+        </div>
+        <Skeleton className="h-[300px] w-full" />
       </div>
     );
   }
 
+  if (!cashRegisters || cashRegisters.length === 0) {
+    return (
+      <Alert className="bg-yellow-50 border-yellow-200">
+        <AlertCircle className="h-4 w-4 text-yellow-600" />
+        <AlertDescription className="text-center py-3 text-yellow-800">
+          Nenhum caixa encontrado. Use o botão acima para criar um novo caixa.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
-    <div className="border rounded-lg">
+    <div className="border rounded-lg overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
@@ -48,7 +68,7 @@ const CashRegistersTable = ({
             <TableHead>Valor Inicial</TableHead>
             <TableHead>Valor Atual</TableHead>
             <TableHead>Data de Abertura</TableHead>
-            <TableHead>Ações</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -57,17 +77,25 @@ const CashRegistersTable = ({
               <TableCell className="font-medium">{cashRegister.name}</TableCell>
               <TableCell>
                 <Badge
-                  variant={cashRegister.status === "OPEN" ? "default" : "destructive"}
-                  className={cashRegister.status === "OPEN" ? "bg-green-500" : ""}
+                  variant={
+                    cashRegister.status === "OPEN" ? "default" : "destructive"
+                  }
+                  className={
+                    cashRegister.status === "OPEN" ? "bg-green-500" : ""
+                  }
                 >
                   {cashRegister.status === "OPEN" ? "Aberto" : "Fechado"}
                 </Badge>
               </TableCell>
-              <TableCell>{formatCurrency(cashRegister.initialamount)}</TableCell>
-              <TableCell>{formatCurrency(cashRegister.currentamount)}</TableCell>
-              <TableCell>{formatDate(cashRegister.openedat)}</TableCell>
               <TableCell>
-                <div className="flex space-x-2">
+                {formatCurrency(cashRegister.initialamount)}
+              </TableCell>
+              <TableCell>
+                {formatCurrency(cashRegister.currentamount)}
+              </TableCell>
+              <TableCell>{formatDate(cashRegister.openedat)}</TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"
                     size="sm"

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createCashMovement } from "../services/cashService";
@@ -7,11 +6,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
+  DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CashRegister, PaymentMethod } from "../types";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -20,66 +21,89 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CashRegister, PaymentMethod } from "../types";
-import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowDownUp } from "lucide-react";
 
 interface AddCashMovementDialogProps {
   cashRegister: CashRegister;
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
+
+const ADD_MOVEMENT_TYPES = [
+  { value: "INCOME", label: "Entrada", color: "text-green-600" },
+  { value: "EXPENSE", label: "Saída", color: "text-red-600" },
+];
+
+const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: "CASH", label: "Dinheiro" },
+  { value: "CREDIT_CARD", label: "Cartão de Crédito" },
+  { value: "DEBIT_CARD", label: "Cartão de Débito" },
+  { value: "PIX", label: "PIX" },
+  { value: "OTHER", label: "Outro" },
+];
 
 const AddCashMovementDialog = ({
   cashRegister,
-  isOpen,
-  onOpenChange,
+  onSuccess,
 }: AddCashMovementDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [newMovement, setNewMovement] = useState({
-    description: "",
-    amount: "",
-    type: "INCOME",
-    paymentmethod: "CASH" as PaymentMethod,
-  });
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState<"INCOME" | "EXPENSE">("INCOME");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
 
-  const movementMutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: async () => {
-      if (!newMovement.description.trim()) {
+      if (!description.trim()) {
         throw new Error("A descrição é obrigatória");
       }
 
-      const amount = parseFloat(newMovement.amount);
-      if (isNaN(amount) || amount <= 0) {
+      const amountValue = parseFloat(amount);
+      if (isNaN(amountValue) || amountValue <= 0) {
         throw new Error("O valor deve ser um número válido maior que zero");
       }
 
       return createCashMovement({
-        description: newMovement.description.trim(),
-        amount,
-        type: newMovement.type as "INCOME" | "EXPENSE",
-        paymentmethod: newMovement.paymentmethod,
+        description: description.trim(),
+        amount: amountValue,
+        type,
+        paymentmethod: paymentMethod,
         cashregisterid: cashRegister.id,
         restaurantid: cashRegister.restaurantid,
         orderid: null,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cashRegisters"] });
+      // Atualizar cache
       queryClient.invalidateQueries({
         queryKey: ["cashMovements", cashRegister.id],
       });
-      onOpenChange(false);
-      setNewMovement({
-        description: "",
-        amount: "",
-        type: "INCOME",
-        paymentmethod: "CASH",
-      });
+      queryClient.invalidateQueries({ queryKey: ["cashRegisters"] });
+
+      // Mostrar toast de sucesso
       toast({
         title: "Sucesso",
-        description: "Movimentação registrada com sucesso!",
+        description: `Movimentação ${
+          type === "INCOME" ? "de entrada" : "de saída"
+        } registrada com sucesso!`,
       });
+
+      // Resetar formulário
+      setDescription("");
+      setAmount("");
+
+      // Fechar diálogo
+      setOpen(false);
+
+      // Executar callback
+      if (onSuccess) {
+        console.log("Executando callback após adicionar movimentação");
+        setTimeout(() => {
+          onSuccess();
+        }, 300);
+      }
     },
     onError: (error) => {
       toast({
@@ -93,128 +117,118 @@ const AddCashMovementDialog = ({
     },
   });
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const { name, value } = e.target;
-    setNewMovement((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setNewMovement((prev) => ({ ...prev, [name]: value }));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    movementMutation.mutate();
+    createMutation.mutate();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(newOpen) => {
+        setOpen(newOpen);
+        // Se o diálogo for fechado, podemos atualizar os dados
+        if (!newOpen && onSuccess) {
+          onSuccess();
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button>
+          <ArrowDownUp className="h-4 w-4 mr-2" />
+          Registrar Movimentação
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Registrar Movimentação</DialogTitle>
-          <DialogDescription>
-            Registre uma entrada ou saída no caixa: {cashRegister.name}
-          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="type">Tipo de Movimentação</Label>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                className={`flex-1 ${
-                  newMovement.type === "INCOME"
-                    ? "bg-green-500 hover:bg-green-600"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-                onClick={() => handleSelectChange("type", "INCOME")}
-              >
-                <ArrowUpCircle className="h-4 w-4 mr-2" />
-                Entrada
-              </Button>
-              <Button
-                type="button"
-                className={`flex-1 ${
-                  newMovement.type === "EXPENSE"
-                    ? "bg-red-500 hover:bg-red-600"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-                onClick={() => handleSelectChange("type", "EXPENSE")}
-              >
-                <ArrowDownCircle className="h-4 w-4 mr-2" />
-                Saída
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Input
-              id="description"
-              name="description"
-              value={newMovement.description}
-              onChange={handleInputChange}
-              placeholder="Descrição da movimentação"
-              required
-            />
+            <Select
+              value={type}
+              onValueChange={(value) => setType(value as "INCOME" | "EXPENSE")}
+            >
+              <SelectTrigger id="type">
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                {ADD_MOVEMENT_TYPES.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className={option.color}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="amount">Valor (R$)</Label>
             <Input
               id="amount"
-              name="amount"
               type="number"
               step="0.01"
-              value={newMovement.amount}
-              onChange={handleInputChange}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              required
+              className={
+                type === "INCOME" ? "border-green-500" : "border-red-500"
+              }
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="paymentmethod">Forma de Pagamento</Label>
+            <Label htmlFor="paymentMethod">Método de Pagamento</Label>
             <Select
-              value={newMovement.paymentmethod}
+              value={paymentMethod}
               onValueChange={(value) =>
-                handleSelectChange("paymentmethod", value)
+                setPaymentMethod(value as PaymentMethod)
               }
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a forma de pagamento" />
+              <SelectTrigger id="paymentMethod">
+                <SelectValue placeholder="Selecione o método de pagamento" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="CASH">Dinheiro</SelectItem>
-                <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
-                <SelectItem value="DEBIT_CARD">Cartão de Débito</SelectItem>
-                <SelectItem value="PIX">PIX</SelectItem>
-                <SelectItem value="OTHER">Outro</SelectItem>
+                {PAYMENT_METHODS.map((method) => (
+                  <SelectItem key={method.value} value={method.value}>
+                    {method.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Descreva a movimentação"
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter className="pt-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={movementMutation.isPending}
+              onClick={() => setOpen(false)}
+              disabled={createMutation.isPending}
             >
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
-              disabled={movementMutation.isPending}
-              className={newMovement.type === "INCOME" ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600"}
-            >
-              {movementMutation.isPending
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending
                 ? "Registrando..."
                 : "Registrar Movimentação"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

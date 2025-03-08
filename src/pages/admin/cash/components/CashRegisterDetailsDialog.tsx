@@ -1,66 +1,64 @@
-
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCashMovements, closeCashRegister } from "../services/cashService";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CashRegister } from "../types";
-import { formatCurrency, formatDate } from "../utils";
+import { CashRegister, CashMovement } from "../types";
+import { fetchCashMovements, closeCashRegister } from "../services/cashService";
 import CashMovementsTable from "./CashMovementsTable";
 import AddCashMovementDialog from "./AddCashMovementDialog";
+import { formatCurrency, formatDate } from "../utils";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowDownUp, XSquare } from "lucide-react";
 
 interface CashRegisterDetailsDialogProps {
-  selectedCashRegister: CashRegister | null;
-  isOpen: boolean;
+  cashRegister: CashRegister;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
   onCashRegisterClosed?: () => void;
 }
 
 const CashRegisterDetailsDialog = ({
-  selectedCashRegister,
-  isOpen,
+  cashRegister,
+  open,
   onOpenChange,
   onCashRegisterClosed,
 }: CashRegisterDetailsDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isAddMovementOpen, setIsAddMovementOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
 
-  const { data: cashMovements, isLoading: isLoadingMovements } = useQuery({
-    queryKey: ["cashMovements", selectedCashRegister?.id],
-    queryFn: () => {
-      if (!selectedCashRegister) return [];
-      return fetchCashMovements(selectedCashRegister.id);
-    },
-    enabled: !!selectedCashRegister && isOpen,
+  // Buscar movimentações do caixa
+  const {
+    data: cashMovements = [],
+    isLoading: isLoadingMovements,
+    refetch: refetchMovements,
+  } = useQuery({
+    queryKey: ["cashMovements", cashRegister?.id],
+    queryFn: () => fetchCashMovements(cashRegister.id),
+    enabled: !!cashRegister?.id && open,
   });
 
+  // Fechar caixa
   const closeMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedCashRegister) {
-        throw new Error("Nenhum caixa selecionado");
-      }
-      return closeCashRegister(selectedCashRegister.id);
-    },
+    mutationFn: () => closeCashRegister(cashRegister.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashRegisters"] });
+
       toast({
         title: "Sucesso",
         description: "Caixa fechado com sucesso!",
       });
+
       onOpenChange(false);
-      onCashRegisterClosed?.();
+
+      if (onCashRegisterClosed) {
+        onCashRegisterClosed();
+      }
     },
     onError: (error) => {
       toast({
@@ -72,130 +70,134 @@ const CashRegisterDetailsDialog = ({
     },
   });
 
+  // Calcular totais
+  const totalIncome = cashMovements
+    .filter((movement) => movement.type === "INCOME")
+    .reduce((acc, movement) => acc + movement.amount, 0);
+
+  const totalExpense = cashMovements
+    .filter((movement) => movement.type === "EXPENSE")
+    .reduce((acc, movement) => acc + movement.amount, 0);
+
   const handleCloseCashRegister = () => {
-    if (window.confirm("Tem certeza que deseja fechar este caixa?")) {
+    if (
+      window.confirm(
+        `Tem certeza que deseja fechar o caixa "${cashRegister.name}"?`
+      )
+    ) {
       closeMutation.mutate();
     }
   };
 
-  if (!selectedCashRegister) {
-    return null;
-  }
+  const handleMovementAdded = () => {
+    refetchMovements();
+    queryClient.invalidateQueries({ queryKey: ["cashRegisters"] });
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Detalhes do Caixa: {selectedCashRegister.name}</DialogTitle>
-          <DialogDescription>
-            Informações e movimentações do caixa.
-          </DialogDescription>
+          <DialogTitle>
+            Caixa: {cashRegister?.name}{" "}
+            <span
+              className={`ml-2 inline-block px-2 py-1 text-xs rounded-full ${
+                cashRegister?.status === "OPEN"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
+              {cashRegister?.status === "OPEN" ? "Aberto" : "Fechado"}
+            </span>
+          </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="summary" className="w-full">
+        <Tabs
+          defaultValue="details"
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="mt-2"
+        >
           <TabsList className="grid grid-cols-2 mb-4">
-            <TabsTrigger value="summary">Resumo</TabsTrigger>
-            <TabsTrigger value="movements">Movimentações</TabsTrigger>
+            <TabsTrigger value="details">Detalhes</TabsTrigger>
+            <TabsTrigger value="movements">
+              Movimentações ({cashMovements.length})
+            </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="summary" className="mt-0">
-            <div className="grid grid-cols-2 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Saldo Inicial</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {formatCurrency(selectedCashRegister.initialamount)}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Saldo Atual</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {formatCurrency(selectedCashRegister.currentamount)}
-                  </div>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Data de Abertura</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-base">{formatDate(selectedCashRegister.openedat)}</div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Badge 
-                    variant={selectedCashRegister.status === "OPEN" ? "default" : "destructive"}
-                    className={selectedCashRegister.status === "OPEN" ? "bg-green-500" : ""}
-                  >
-                    {selectedCashRegister.status === "OPEN" ? "Aberto" : "Fechado"}
-                  </Badge>
-                </CardContent>
-              </Card>
+          <TabsContent value="details" className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Valor Inicial</p>
+                <p className="text-lg font-bold">
+                  {formatCurrency(cashRegister?.initialamount)}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Saldo Atual</p>
+                <p className="text-lg font-bold">
+                  {formatCurrency(cashRegister?.currentamount)}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Entradas</p>
+                <p className="text-lg font-bold text-green-600">
+                  {formatCurrency(totalIncome)}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Saídas</p>
+                <p className="text-lg font-bold text-red-600">
+                  {formatCurrency(totalExpense)}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Data de Abertura</p>
+                <p>{formatDate(cashRegister?.openedat)}</p>
+              </div>
+              {cashRegister?.closedat && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Data de Fechamento</p>
+                  <p>{formatDate(cashRegister?.closedat)}</p>
+                </div>
+              )}
             </div>
-            
-            {selectedCashRegister.status === "OPEN" && (
-              <div className="flex justify-end gap-2 mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsAddMovementOpen(true)}
-                >
-                  <ArrowDownUp className="h-4 w-4 mr-2" />
-                  Registrar Movimentação
-                </Button>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Fechar
+              </Button>
+              {cashRegister?.status === "OPEN" && (
                 <Button
                   variant="destructive"
                   onClick={handleCloseCashRegister}
                   disabled={closeMutation.isPending}
                 >
-                  <XSquare className="h-4 w-4 mr-2" />
-                  {closeMutation.isPending ? "Fechando..." : "Fechar Caixa"}
+                  {closeMutation.isPending
+                    ? "Fechando Caixa..."
+                    : "Fechar Caixa"}
                 </Button>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="movements" className="space-y-4">
+            {cashRegister?.status === "OPEN" && (
+              <div className="flex justify-end mb-4">
+                <AddCashMovementDialog
+                  cashRegister={cashRegister}
+                  onSuccess={handleMovementAdded}
+                />
               </div>
             )}
-          </TabsContent>
-          
-          <TabsContent value="movements" className="mt-0">
-            <div className="space-y-4">
-              {selectedCashRegister.status === "OPEN" && (
-                <div className="flex justify-end">
-                  <Button 
-                    onClick={() => setIsAddMovementOpen(true)}
-                  >
-                    <ArrowDownUp className="h-4 w-4 mr-2" />
-                    Registrar Movimentação
-                  </Button>
-                </div>
-              )}
-              
-              <CashMovementsTable 
-                cashMovements={cashMovements || []} 
-                isLoading={isLoadingMovements} 
-              />
-            </div>
+
+            <CashMovementsTable
+              cashMovements={cashMovements}
+              isLoading={isLoadingMovements}
+            />
           </TabsContent>
         </Tabs>
       </DialogContent>
-      
-      {selectedCashRegister && (
-        <AddCashMovementDialog
-          cashRegister={selectedCashRegister}
-          isOpen={isAddMovementOpen}
-          onOpenChange={setIsAddMovementOpen}
-        />
-      )}
     </Dialog>
   );
 };
