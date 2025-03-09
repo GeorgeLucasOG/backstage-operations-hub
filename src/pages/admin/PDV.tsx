@@ -30,6 +30,10 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+
+// Estilos globais para scrollbar (adicionados ao componente)
+import "./pdv-scrollbar.css";
 
 // Criar cliente Supabase
 const supabaseUrl =
@@ -38,6 +42,19 @@ const supabaseAnonKey =
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
   process.env.REACT_APP_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Definição de estilos CSS inline para scrollbar
+const scrollbarStyles = {
+  categoriesScrollbar: `
+    scrollbar-thin 
+    scrollbar-thumb-rounded-md 
+    scrollbar-track-transparent
+    hover:scrollbar-thumb-slate-300
+    scrollbar-thumb-slate-200/50
+    transition-colors
+    duration-200
+  `,
+};
 
 // Tipos
 interface Product {
@@ -348,8 +365,13 @@ const PDV = () => {
                   </div>
 
                   <div className="border rounded-md">
-                    <ScrollArea className="w-full">
-                      <div className="flex space-x-2 p-2 overflow-x-auto">
+                    <div
+                      className={cn(
+                        "overflow-x-auto",
+                        scrollbarStyles.categoriesScrollbar
+                      )}
+                    >
+                      <div className="flex space-x-2 p-2">
                         <Button
                           variant={
                             activeCategory === null ? "default" : "outline"
@@ -385,7 +407,7 @@ const PDV = () => {
                               </Button>
                             ))}
                       </div>
-                    </ScrollArea>
+                    </div>
                   </div>
                 </CardHeader>
 

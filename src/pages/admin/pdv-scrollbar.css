@@ -1,0 +1,47 @@
+/* Estilos para scrollbar - compatibilidade entre navegadores */
+
+/* Estilo para scrollbar fina */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+/* Estilo para o thumb (a parte que você arrasta) da scrollbar */
+.scrollbar-thumb-rounded-md::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+}
+
+/* Estilo para o track (o fundo) da scrollbar */
+.scrollbar-track-transparent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Estilo para o thumb em estado padrão */
+.scrollbar-thumb-slate-200\/50::-webkit-scrollbar-thumb {
+  background-color: rgba(226, 232, 240, 0.5);
+  transition: background-color 0.2s ease;
+}
+
+/* Estilo para o thumb ao passar o mouse */
+.hover\:scrollbar-thumb-slate-300:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(203, 213, 225, 0.8);
+}
+
+/* Para Firefox */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(226, 232, 240, 0.5) transparent;
+}
+
+.scrollbar-thin:hover {
+  scrollbar-color: rgba(203, 213, 225, 0.8) transparent;
+}
+
+/* Garantir que a transição funcione */
+.transition-colors {
+  transition-property: background-color, border-color, color, fill, stroke;
+}
+
+.duration-200 {
+  transition-duration: 200ms;
+}
