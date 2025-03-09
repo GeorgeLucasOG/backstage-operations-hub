@@ -2,12 +2,16 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const Index = () => {
+const Index: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirecionar para o painel de administração
-    navigate("/admin");
+    // Add a small delay before redirecting to make sure components are loaded
+    const timer = setTimeout(() => {
+      navigate("/admin");
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [navigate]);
 
   return (

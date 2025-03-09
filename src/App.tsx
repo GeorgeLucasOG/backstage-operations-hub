@@ -20,7 +20,7 @@ import NotFound from "./pages/NotFound";
 import ApiSettings from "./pages/admin/ApiSettings";
 import TourGuide from "./components/TourGuide";
 
-// Create a client with error handling configurado para compatibilidade com aplicativos cliente
+// Create a client with error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -41,36 +41,34 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <TourGuide />
-            <Routes>
-              <Route path="/" element={<Navigate to="/admin" replace />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="restaurants" element={<Restaurant />} />
-                <Route path="products" element={<Products />} />
-                <Route path="menu" element={<Categories />} />
-                <Route path="orders" element={<Orders />} />
-                <Route path="accounts-payable" element={<AccountsPayable />} />
-                <Route
-                  path="accounts-receivable"
-                  element={<AccountsReceivable />}
-                />
-                <Route path="pdv" element={<PDV />} />
-                <Route path="api-settings" element={<ApiSettings />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <TourGuide />
+          <Routes>
+            <Route path="/" element={<Navigate to="/admin" replace />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="restaurants" element={<Restaurant />} />
+              <Route path="products" element={<Products />} />
+              <Route path="menu" element={<Categories />} />
+              <Route path="orders" element={<Orders />} />
+              <Route path="accounts-payable" element={<AccountsPayable />} />
+              <Route
+                path="accounts-receivable"
+                element={<AccountsReceivable />}
+              />
+              <Route path="pdv" element={<PDV />} />
+              <Route path="api-settings" element={<ApiSettings />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 
