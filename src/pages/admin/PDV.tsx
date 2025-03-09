@@ -74,6 +74,28 @@ const paymentMethods: PaymentMethod[] = [
   { id: "pix", name: "PIX", icon: <DollarSign className="w-4 h-4" /> },
 ];
 
+// Componente de imagem com fallback
+const ProductImage = ({ product }: { product: Product }) => {
+  const [error, setError] = useState(false);
+  const fallbackUrl = `https://placehold.co/400x300?text=${encodeURIComponent(
+    product.name || "Produto"
+  )}`;
+
+  // Se houver erro ou imageUrl não existir, usar fallback
+  const imageUrl = error || !product.imageUrl ? fallbackUrl : product.imageUrl;
+
+  return (
+    <div className="relative w-full h-40 bg-gray-100">
+      <img
+        src={imageUrl}
+        alt={product.name}
+        className="w-full h-full object-cover"
+        onError={() => setError(true)}
+      />
+    </div>
+  );
+};
+
 const PDV = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
@@ -129,16 +151,27 @@ const PDV = () => {
       }
 
       return data.map((product) => {
-        // Para evitar o erro de tipo, usamos verificação segura com propriedades opcionais
-        const imgUrl =
+        // Melhorar a detecção de URLs válidas
+        const rawImgUrl =
           product.imageUrl ||
           (product as { image_url?: string }).image_url ||
           null;
 
+        // Verificar se a URL é válida (não vazia e começa com http/https)
+        const isValidImageUrl =
+          typeof rawImgUrl === "string" &&
+          rawImgUrl.trim() !== "" &&
+          (rawImgUrl.startsWith("http://") || rawImgUrl.startsWith("https://"));
+
         return {
           ...product,
           price: product.price || 0,
-          imageUrl: imgUrl || "https://placehold.co/200x200?text=Produto",
+          // Usar URL válida ou placeholder específico para o produto
+          imageUrl: isValidImageUrl
+            ? rawImgUrl
+            : `https://placehold.co/400x300?text=${encodeURIComponent(
+                product.name || "Produto"
+              )}`,
           description: product.description || "Sem descrição",
           active: true,
         };
@@ -367,15 +400,7 @@ const PDV = () => {
                           key={product.id}
                           className="border shadow-sm hover:shadow-md transition-shadow"
                         >
-                          <div
-                            className="w-full h-40 bg-cover bg-center bg-gray-100"
-                            style={{
-                              backgroundImage: `url(${
-                                product.imageUrl ||
-                                "https://placehold.co/400x300?text=Sem+Imagem"
-                              })`,
-                            }}
-                          />
+                          <ProductImage product={product} />
                           <CardContent className="p-4">
                             <div className="flex justify-between items-start mb-3">
                               <div>
