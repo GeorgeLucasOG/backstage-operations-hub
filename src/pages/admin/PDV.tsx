@@ -347,39 +347,46 @@ const PDV = () => {
                     />
                   </div>
 
-                  <ScrollArea className="w-full whitespace-nowrap pb-1">
-                    <div className="flex space-x-2">
-                      <Button
-                        variant={
-                          activeCategory === null ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() => setActiveCategory(null)}
-                      >
-                        Todos
-                      </Button>
-                      {isLoadingCategories
-                        ? Array(3)
-                            .fill(0)
-                            .map((_, i) => (
-                              <Skeleton key={i} className="h-9 w-24" />
-                            ))
-                        : categories.map((category) => (
-                            <Button
-                              key={category.id}
-                              variant={
-                                activeCategory === category.id
-                                  ? "default"
-                                  : "outline"
-                              }
-                              size="sm"
-                              onClick={() => setActiveCategory(category.id)}
-                            >
-                              {category.name}
-                            </Button>
-                          ))}
-                    </div>
-                  </ScrollArea>
+                  <div className="border rounded-md">
+                    <ScrollArea className="w-full">
+                      <div className="flex space-x-2 p-2 overflow-x-auto">
+                        <Button
+                          variant={
+                            activeCategory === null ? "default" : "outline"
+                          }
+                          size="sm"
+                          onClick={() => setActiveCategory(null)}
+                          className="flex-shrink-0"
+                        >
+                          Todos
+                        </Button>
+                        {isLoadingCategories
+                          ? Array(3)
+                              .fill(0)
+                              .map((_, i) => (
+                                <Skeleton
+                                  key={i}
+                                  className="h-9 w-24 flex-shrink-0"
+                                />
+                              ))
+                          : categories.map((category) => (
+                              <Button
+                                key={category.id}
+                                variant={
+                                  activeCategory === category.id
+                                    ? "default"
+                                    : "outline"
+                                }
+                                size="sm"
+                                onClick={() => setActiveCategory(category.id)}
+                                className="flex-shrink-0"
+                              >
+                                {category.name}
+                              </Button>
+                            ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
                 </CardHeader>
 
                 <CardContent>
