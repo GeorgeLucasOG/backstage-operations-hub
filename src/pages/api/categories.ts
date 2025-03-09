@@ -1,10 +1,8 @@
-
 import { createClient } from "@supabase/supabase-js";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { DATABASE_CONFIG } from "@/config/database";
 
-const supabaseUrl = DATABASE_CONFIG.url;
-const supabaseAnonKey = DATABASE_CONFIG.key;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 

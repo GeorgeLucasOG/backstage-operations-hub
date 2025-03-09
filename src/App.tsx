@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -18,9 +17,8 @@ import AccountsReceivable from "./pages/admin/AccountsReceivable";
 import PDV from "./pages/admin/PDV";
 import NotFound from "./pages/NotFound";
 import ApiSettings from "./pages/admin/ApiSettings";
-import TourGuide from "./components/TourGuide";
 
-// Create a client with error handling
+// Create a client with error handling configurado para compatibilidade com aplicativos cliente
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -33,42 +31,36 @@ const queryClient = new QueryClient({
 
 // Make App a proper React component with explicit return
 const App: React.FC = () => {
-  // Simulação de autenticação para desenvolvimento
-  React.useEffect(() => {
-    if (!localStorage.getItem("isAuthenticated")) {
-      localStorage.setItem("isAuthenticated", "true");
-    }
-  }, []);
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <TourGuide />
-          <Routes>
-            <Route path="/" element={<Navigate to="/admin" replace />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="restaurants" element={<Restaurant />} />
-              <Route path="products" element={<Products />} />
-              <Route path="menu" element={<Categories />} />
-              <Route path="orders" element={<Orders />} />
-              <Route path="accounts-payable" element={<AccountsPayable />} />
-              <Route
-                path="accounts-receivable"
-                element={<AccountsReceivable />}
-              />
-              <Route path="pdv" element={<PDV />} />
-              <Route path="api-settings" element={<ApiSettings />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="restaurants" element={<Restaurant />} />
+                <Route path="products" element={<Products />} />
+                <Route path="menu" element={<Categories />} />
+                <Route path="orders" element={<Orders />} />
+                <Route path="accounts-payable" element={<AccountsPayable />} />
+                <Route
+                  path="accounts-receivable"
+                  element={<AccountsReceivable />}
+                />
+                <Route path="pdv" element={<PDV />} />
+                <Route path="api-settings" element={<ApiSettings />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </React.StrictMode>
   );
 };
 
