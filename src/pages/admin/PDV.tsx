@@ -1,11 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -21,8 +24,10 @@ import {
   ShoppingCart,
   Check,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Tipos
 interface Product {
@@ -30,9 +35,15 @@ interface Product {
   name: string;
   price: number;
   description: string;
-  categoryId: string;
-  imageUrl: string;
+  menuCategoryId?: string;
+  imageUrl?: string;
   active?: boolean;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  restaurantId?: string;
 }
 
 interface CartItem {
@@ -46,62 +57,6 @@ interface PaymentMethod {
   name: string;
   icon: React.ReactNode;
 }
-
-// Dados de exemplo para produtos
-const exampleProducts: Product[] = [
-  {
-    id: "p1",
-    name: "X-Burger",
-    price: 19.9,
-    description: "Hambúrguer com queijo, alface e tomate",
-    categoryId: "c1",
-    imageUrl: "https://picsum.photos/200",
-    active: true,
-  },
-  {
-    id: "p2",
-    name: "X-Salada",
-    price: 22.9,
-    description: "Hambúrguer com queijo, alface, tomate e maionese",
-    categoryId: "c1",
-    imageUrl: "https://picsum.photos/200",
-    active: true,
-  },
-  {
-    id: "p3",
-    name: "X-Bacon",
-    price: 24.9,
-    description: "Hambúrguer com queijo, bacon, alface e tomate",
-    categoryId: "c1",
-    imageUrl: "https://picsum.photos/200",
-    active: true,
-  },
-  {
-    id: "p4",
-    name: "Refrigerante Lata",
-    price: 5.5,
-    description: "Lata 350ml",
-    categoryId: "c2",
-    imageUrl: "https://picsum.photos/200",
-    active: true,
-  },
-  {
-    id: "p5",
-    name: "Batata Frita",
-    price: 12.9,
-    description: "Porção pequena",
-    categoryId: "c3",
-    imageUrl: "https://picsum.photos/200",
-    active: true,
-  },
-];
-
-// Categorias de exemplo
-const categories = [
-  { id: "c1", name: "Hambúrgueres" },
-  { id: "c2", name: "Bebidas" },
-  { id: "c3", name: "Acompanhamentos" },
-];
 
 // Métodos de pagamento
 const paymentMethods: PaymentMethod[] = [
@@ -131,15 +86,76 @@ const PDV = () => {
   const [customerName, setCustomerName] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Buscar categorias
+  const {
+    data: categories,
+    isLoading: categoriesLoading,
+    error: categoriesError,
+  } = useQuery({
+    queryKey: ["menu-categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("MenuCategory")
+        .select("*")
+        .order("name");
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return data as Category[];
+    },
+  });
+
+  // Buscar produtos
+  const {
+    data: products,
+    isLoading: productsLoading,
+    error: productsError,
+    refetch: refetchProducts,
+  } = useQuery({
+    queryKey: ["products", activeCategory],
+    queryFn: async () => {
+      let query = supabase.from("Product").select("*");
+
+      if (activeCategory) {
+        query = query.eq("menuCategoryId", activeCategory);
+      }
+
+      const { data, error } = await query.order("name");
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return data.map((product) => {
+        // Para evitar o erro de tipo, usamos verificação segura com propriedades opcionais
+        const imgUrl =
+          product.imageUrl ||
+          (product as { image_url?: string }).image_url ||
+          null;
+
+        return {
+          ...product,
+          price: product.price || 0,
+          imageUrl: imgUrl || "https://placehold.co/200x200?text=Produto",
+          description: product.description || "Sem descrição",
+          active: true,
+        };
+      }) as Product[];
+    },
+  });
+
   // Produtos filtrados
-  const filteredProducts = exampleProducts.filter(
-    (product) =>
-      (activeCategory ? product.categoryId === activeCategory : true) &&
-      (searchTerm
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+
+    return products.filter((product) =>
+      searchTerm
         ? product.name.toLowerCase().includes(searchTerm.toLowerCase())
-        : true) &&
-      product.active
-  );
+        : true
+    );
+  }, [products, searchTerm]);
 
   // Adicionar item ao carrinho
   const addToCart = (product: Product) => {
@@ -243,28 +259,50 @@ const PDV = () => {
     }, 1500);
   };
 
+  // Componente de esqueleto para carregamento
+  const ProductSkeleton = () => (
+    <Card className="border shadow-sm">
+      <Skeleton className="h-40 w-full" />
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start mb-3">
+          <div className="w-3/4">
+            <Skeleton className="h-6 w-full mb-2" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3 mt-1" />
+          </div>
+          <Skeleton className="h-6 w-20" />
+        </div>
+        <Skeleton className="h-10 w-full mt-3" />
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="container py-6">
-      <h1 className="text-3xl font-bold flex items-center mb-6">
-        <ShoppingCart className="mr-2 h-8 w-8" />
+    <div className="container max-w-full py-6 px-4 md:px-6">
+      <h1 className="text-2xl md:text-3xl font-bold flex items-center mb-6">
+        <ShoppingCart className="mr-2 h-6 w-6 md:h-8 md:w-8" />
         Ponto de Venda (PDV)
       </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Produtos e Categorias */}
-        <div className="md:col-span-2">
+        <div className="lg:col-span-2">
           <Tabs value={currentTab} onValueChange={setCurrentTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="products">Produtos</TabsTrigger>
-              <TabsTrigger value="checkout">Finalizar Venda</TabsTrigger>
+            <TabsList className="mb-4 w-full">
+              <TabsTrigger value="products" className="flex-1">
+                Produtos
+              </TabsTrigger>
+              <TabsTrigger value="checkout" className="flex-1">
+                Finalizar Venda
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="products">
               <Card>
                 <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <CardTitle>Produtos</CardTitle>
-                    <div className="relative w-full max-w-sm">
+                    <div className="relative w-full md:max-w-sm">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="search"
@@ -276,75 +314,119 @@ const PDV = () => {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <Button
-                      variant={activeCategory === null ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setActiveCategory(null)}
-                    >
-                      Todos
-                    </Button>
-                    {categories.map((category) => (
+                  <div className="overflow-x-auto pb-2">
+                    <div className="flex flex-nowrap gap-2 min-w-max py-1">
                       <Button
-                        key={category.id}
                         variant={
-                          activeCategory === category.id ? "default" : "outline"
+                          activeCategory === null ? "default" : "outline"
                         }
                         size="sm"
-                        onClick={() => setActiveCategory(category.id)}
+                        onClick={() => setActiveCategory(null)}
                       >
-                        {category.name}
+                        Todos
                       </Button>
-                    ))}
+                      {categoriesLoading ? (
+                        <>
+                          <Skeleton className="h-9 w-24" />
+                          <Skeleton className="h-9 w-24" />
+                          <Skeleton className="h-9 w-24" />
+                        </>
+                      ) : (
+                        categories?.map((category) => (
+                          <Button
+                            key={category.id}
+                            variant={
+                              activeCategory === category.id
+                                ? "default"
+                                : "outline"
+                            }
+                            size="sm"
+                            onClick={() => setActiveCategory(category.id)}
+                          >
+                            {category.name}
+                          </Button>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
 
                 <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredProducts.map((product) => (
-                      <Card key={product.id} className="overflow-hidden">
-                        <div
-                          className="h-32 bg-cover bg-center"
-                          style={{
-                            backgroundImage: `url(${product.imageUrl})`,
-                          }}
-                        />
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h3 className="font-medium">{product.name}</h3>
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {product.description}
-                              </p>
+                  {productsLoading || !products ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Array(6)
+                        .fill(0)
+                        .map((_, i) => (
+                          <ProductSkeleton key={i} />
+                        ))}
+                    </div>
+                  ) : filteredProducts.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredProducts.map((product) => (
+                        <Card
+                          key={product.id}
+                          className="border shadow-sm hover:shadow-md transition-shadow"
+                        >
+                          <div
+                            className="w-full h-40 bg-cover bg-center bg-gray-100"
+                            style={{
+                              backgroundImage: `url(${
+                                product.imageUrl ||
+                                "https://placehold.co/400x300?text=Sem+Imagem"
+                              })`,
+                            }}
+                          />
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <h3 className="font-medium text-lg">
+                                  {product.name}
+                                </h3>
+                                <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                                  {product.description}
+                                </p>
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className="text-base font-semibold"
+                              >
+                                {formatCurrency(product.price || 0)}
+                              </Badge>
                             </div>
-                            <Badge variant="outline">
-                              {formatCurrency(product.price)}
-                            </Badge>
-                          </div>
-                          <Button
-                            className="w-full mt-2"
-                            size="sm"
-                            onClick={() => addToCart(product)}
-                          >
-                            <Plus className="mr-1 h-4 w-4" />
-                            Adicionar
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ))}
-
-                    {filteredProducts.length === 0 && (
-                      <div className="col-span-full py-8 text-center">
-                        <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
-                        <p className="mt-2 text-lg font-medium">
-                          Nenhum produto encontrado
-                        </p>
-                        <p className="text-muted-foreground">
-                          Tente ajustar sua busca ou selecione outra categoria.
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                            <Button
+                              className="w-full mt-3"
+                              onClick={() => addToCart(product)}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Adicionar ao Carrinho
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="col-span-full py-8 text-center">
+                      <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
+                      <p className="mt-2 text-lg font-medium">
+                        Nenhum produto encontrado
+                      </p>
+                      <p className="text-muted-foreground">
+                        Tente ajustar sua busca ou selecione outra categoria.
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="mt-4"
+                        onClick={() => {
+                          setSearchTerm("");
+                          setActiveCategory(null);
+                          refetchProducts();
+                        }}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Limpar filtros
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -373,7 +455,7 @@ const PDV = () => {
 
                   <div>
                     <Label className="mb-2 block">Método de Pagamento</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                       {paymentMethods.map((method) => (
                         <Button
                           key={method.id}
@@ -412,7 +494,10 @@ const PDV = () => {
                         }
                       >
                         {loading ? (
-                          "Processando..."
+                          <span className="flex items-center">
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                            Processando...
+                          </span>
                         ) : (
                           <>
                             <Check className="mr-2 h-4 w-4" />
@@ -430,7 +515,7 @@ const PDV = () => {
 
         {/* Carrinho */}
         <div>
-          <Card>
+          <Card className="sticky top-4">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-center">
                 <CardTitle className="flex items-center">
@@ -456,7 +541,7 @@ const PDV = () => {
                   <p className="mt-2 text-muted-foreground">Carrinho vazio</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
                   {cart.map((item) => (
                     <div
                       key={item.product.id}
@@ -511,22 +596,24 @@ const PDV = () => {
                       </div>
                     </div>
                   ))}
-
-                  <div className="pt-4 border-t flex justify-between font-medium text-lg">
-                    <span>Total</span>
-                    <span>{formatCurrency(calculateTotal())}</span>
-                  </div>
-
-                  <Button
-                    className="w-full mt-4"
-                    onClick={() => setCurrentTab("checkout")}
-                    disabled={cart.length === 0}
-                  >
-                    Finalizar Compra
-                  </Button>
                 </div>
               )}
             </CardContent>
+
+            <CardFooter className="flex-col pt-0">
+              <div className="pt-4 border-t w-full flex justify-between font-medium text-lg">
+                <span>Total</span>
+                <span>{formatCurrency(calculateTotal())}</span>
+              </div>
+
+              <Button
+                className="w-full mt-4"
+                onClick={() => setCurrentTab("checkout")}
+                disabled={cart.length === 0}
+              >
+                Finalizar Compra
+              </Button>
+            </CardFooter>
           </Card>
         </div>
       </div>
