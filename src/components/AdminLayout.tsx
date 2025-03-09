@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import {
@@ -20,6 +21,7 @@ import {
   Settings,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import TourGuide from "./TourGuide";
 
 const AdminLayout = () => {
   const navigate = useNavigate();
@@ -100,6 +102,7 @@ const AdminLayout = () => {
             <Outlet />
           </div>
         </main>
+        <TourGuide />
       </div>
     </SidebarProvider>
   );
