@@ -14,7 +14,7 @@ import Categories from "./pages/admin/Categories";
 import Orders from "./pages/admin/Orders";
 import AccountsPayable from "./pages/admin/AccountsPayable";
 import AccountsReceivable from "./pages/admin/AccountsReceivable";
-import Cash from "./pages/admin/Cash";
+import PDV from "./pages/admin/PDV";
 import NotFound from "./pages/NotFound";
 import ApiSettings from "./pages/admin/ApiSettings";
 
@@ -52,7 +52,7 @@ const App: React.FC = () => {
                   path="accounts-receivable"
                   element={<AccountsReceivable />}
                 />
-                <Route path="cash" element={<Cash />} />
+                <Route path="pdv" element={<PDV />} />
                 <Route path="api-settings" element={<ApiSettings />} />
               </Route>
               <Route path="*" element={<NotFound />} />

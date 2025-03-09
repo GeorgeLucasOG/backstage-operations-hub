@@ -1,3 +1,46 @@
+# Sistema de Administração para Restaurantes
+
+Um sistema administrativo moderno para restaurantes, desenvolvido com React e TypeScript.
+
+## Funcionalidades
+
+- **Dashboard Informativo**: Visão geral do seu restaurante
+- **Gerenciamento de Produtos**: Cadastre e gerencie seu cardápio
+- **Comandas**: Organize os pedidos dos clientes
+- **Usuários**: Gerencie sua equipe de trabalho
+- **Interface Responsiva**: Funciona em dispositivos móveis e desktop
+
+## Tecnologias Utilizadas
+
+- React
+- TypeScript
+- Tailwind CSS
+- Shadcn UI Components
+
+## Como Usar
+
+1. Clone o repositório
+2. Instale as dependências com `npm install`
+3. Execute o projeto com `npm run dev`
+4. Acesse o sistema em `http://localhost:3000/admin`
+
+## Estrutura do Projeto
+
+- `src/pages/admin/index.tsx`: Layout administrativo com menu de navegação e dashboard
+- `src/components/ui`: Componentes de UI reutilizáveis
+
+## Próximos Passos
+
+- Implementação do sistema de produtos
+- Sistema de gerenciamento de comandas
+- Relatórios e analytics
+- Sistema de usuários e permissões
+- Integração com serviços de delivery
+
+## Licença
+
+MIT
+
 # Welcome to your Lovable project
 
 ## Project info
@@ -52,7 +95,7 @@ npm run dev
 
 ## What technologies are used for this project?
 
-This project is built with .
+This project is built with:
 
 - Vite
 - TypeScript
@@ -71,78 +114,6 @@ We don't support custom domains (yet). If you want to deploy your project under 
 # Admin Menu
 
 Sistema de gestão para restaurantes.
-
-## Sobre o problema de permissão do CashRegisters
-
-Se você estiver enfrentando o erro "permission denied for table CashRegisters", siga os passos abaixo para resolver:
-
-### 1. Execute as funções SQL no Supabase
-
-Acesse o painel do Supabase → SQL Editor e execute o conteúdo do arquivo `supabase/functions.sql`. Isso irá criar:
-
-1. A função `execute_sql` que permite executar SQL com privilégios elevados
-2. Uma nova função `create_cash_register_secure` (para evitar conflito com a função existente)
-3. A função `calculate_new_amount` (se ainda não existir)
-
-**IMPORTANTE**: Se você receber o erro "function name 'create_cash_register' is not unique", é porque essa função já existe. Isso é bom! Nosso código está preparado para usar tanto a função existente quanto a nova função `create_cash_register_secure`.
-
-### 2. Configure as variáveis de ambiente
-
-Certifique-se de que seu arquivo `.env.local` contenha:
-
-```
-NEXT_PUBLIC_SUPABASE_URL=https://seuprojetoaqui.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anon-aqui
-SUPABASE_SERVICE_ROLE_KEY=sua-chave-service-role-aqui
-```
-
-A chave `SUPABASE_SERVICE_ROLE_KEY` é importante para o endpoint de API que criamos como último recurso.
-
-### 3. Verifique as políticas de RLS
-
-Execute no SQL Editor do Supabase:
-
-```sql
--- Desativar temporariamente RLS para CashRegisters
-ALTER TABLE "CashRegisters" DISABLE ROW LEVEL SECURITY;
-
--- OU criar uma política permissiva
-CREATE POLICY "Allow all operations for authenticated users on CashRegisters"
-ON "CashRegisters"
-FOR ALL
-TO authenticated
-USING (true)
-WITH CHECK (true);
-```
-
-### 4. Verificar configurações da tabela
-
-```sql
--- Ver definição da tabela
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_name = 'CashRegisters';
-
--- Ver políticas
-SELECT * FROM pg_policies WHERE tablename = 'CashRegisters';
-
--- Ver permissões
-SELECT grantee, privilege_type
-FROM information_schema.role_table_grants
-WHERE table_name = 'CashRegisters';
-```
-
-### 5. Como o código tenta criar caixas
-
-Nosso código agora usa uma abordagem de múltiplas tentativas para garantir que o caixa seja criado:
-
-1. Tenta inserção direta no banco de dados
-2. Tenta usar SQL direto via função `execute_sql`
-3. Tenta usar a nova função `create_cash_register_secure`
-4. Tenta usar a função existente `create_cash_register`
-5. Como último recurso, tenta via API com Service Role
-
-Se qualquer uma dessas abordagens funcionar, o caixa será criado com sucesso.
 
 ## Desenvolvimento
 

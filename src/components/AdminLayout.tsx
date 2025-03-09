@@ -43,6 +43,7 @@ const AdminLayout = () => {
     { icon: Coffee, label: "Produtos", path: "/admin/products" },
     { icon: List, label: "Categorias", path: "/admin/menu" },
     { icon: ShoppingCart, label: "Pedidos", path: "/admin/orders" },
+    { icon: ShoppingCart, label: "PDV", path: "/admin/pdv" },
     {
       icon: Receipt,
       label: "Contas a Receber",
@@ -53,7 +54,6 @@ const AdminLayout = () => {
       label: "Contas a Pagar",
       path: "/admin/accounts-payable",
     },
-    { icon: ShoppingCart, label: "Caixa", path: "/admin/cash" },
     {
       icon: Settings,
       label: "Configurações de API",
