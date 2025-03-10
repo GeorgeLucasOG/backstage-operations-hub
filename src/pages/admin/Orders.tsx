@@ -885,16 +885,16 @@ const Orders = () => {
                 </div>
               </CardHeader>
               <CardContent className="pb-3">
-                <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="flex justify-between items-center mb-3">
                   <div>
                     <p className="text-sm font-medium">Consumo</p>
                     <p className="text-sm">
                       {formatConsumption(order.consumptionMethod)}
                     </p>
                   </div>
-                  <div>
+                  <div className="text-right">
                     <p className="text-sm font-medium">Total</p>
-                    <p className="text-sm font-semibold">
+                    <p className="text-base font-bold text-green-700">
                       {formatCurrency(order.total)}
                     </p>
                   </div>
