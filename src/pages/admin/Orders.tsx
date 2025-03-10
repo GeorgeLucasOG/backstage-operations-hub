@@ -13,7 +13,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Check, Clock, Pencil, Trash, AlertCircle } from "lucide-react";
+import {
+  Plus,
+  Check,
+  Clock,
+  Pencil,
+  Trash,
+  AlertCircle,
+  Menu,
+} from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -36,6 +44,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 // Função para gerar UUID v4
 function generateUUID() {
@@ -278,6 +288,39 @@ const Orders = () => {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detectar se estamos em um dispositivo móvel
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIfMobile();
+    window.addEventListener("resize", checkIfMobile);
+
+    return () => {
+      window.removeEventListener("resize", checkIfMobile);
+    };
+  }, []);
+
+  // Função para formatar data
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "dd/MM/yyyy HH:mm");
+    } catch (error) {
+      console.error("Erro ao formatar data:", error);
+      return dateString;
+    }
+  };
+
+  // Função para formatar valor monetário
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
 
   // Consultar restaurantes disponíveis
   const { data: restaurants = [], isLoading: isLoadingRestaurants } = useQuery({
@@ -619,39 +662,45 @@ const Orders = () => {
   const noRestaurants =
     !isLoadingRestaurants && (!restaurants || restaurants.length === 0);
 
+  // Renderização para desktop e mobile
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Pedidos</h1>
-        <Sheet open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <SheetTrigger asChild>
-            <Button disabled={noRestaurants}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Pedido
-            </Button>
-          </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Novo Pedido</SheetTitle>
-              <SheetDescription>
-                Preencha os dados para criar um novo pedido
-              </SheetDescription>
-            </SheetHeader>
-            {noRestaurants ? (
-              <div className="mt-4 p-4 border border-red-200 rounded bg-red-50 text-red-700">
-                <p>
-                  Não há restaurantes cadastrados. Adicione pelo menos um
-                  restaurante antes de criar pedidos.
-                </p>
-              </div>
-            ) : (
-              <OrderForm
-                onSubmit={(data) => createMutation.mutate(data)}
-                restaurants={restaurants}
-              />
-            )}
-          </SheetContent>
-        </Sheet>
+      <div className="flex justify-between items-center sticky top-0 z-10 bg-white py-2 px-4 border-b mb-4">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl md:text-2xl font-bold">Pedidos</h1>
+        </div>
+        <div className="flex gap-2 ml-auto">
+          <Sheet open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <SheetTrigger asChild>
+              <Button disabled={noRestaurants} className="whitespace-nowrap">
+                <Plus className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Novo Pedido</span>
+                <span className="sm:hidden">Novo</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Novo Pedido</SheetTitle>
+                <SheetDescription>
+                  Preencha os dados para criar um novo pedido
+                </SheetDescription>
+              </SheetHeader>
+              {noRestaurants ? (
+                <div className="mt-4 p-4 border border-red-200 rounded bg-red-50 text-red-700">
+                  <p>
+                    Não há restaurantes cadastrados. Adicione pelo menos um
+                    restaurante antes de criar pedidos.
+                  </p>
+                </div>
+              ) : (
+                <OrderForm
+                  onSubmit={(data) => createMutation.mutate(data)}
+                  restaurants={restaurants}
+                />
+              )}
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
       {/* Dialog de Confirmação de Exclusão */}
@@ -703,53 +752,158 @@ const Orders = () => {
         </SheetContent>
       </Sheet>
 
-      {isOrdersLoading || isLoading ? (
-        <div className="flex items-center justify-center p-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-          <span className="ml-2">Carregando pedidos...</span>
+      {/* Status de carregamento */}
+      {isOrdersLoading && (
+        <div className="py-8 text-center">
+          <p className="text-gray-500">Carregando pedidos...</p>
         </div>
-      ) : (
-        <div className="border rounded-lg">
+      )}
+
+      {/* Mensagem se não houver pedidos */}
+      {!isOrdersLoading && orders && orders.length === 0 && (
+        <div className="py-8 text-center border rounded-lg">
+          <AlertCircle className="h-12 w-12 mx-auto text-gray-400" />
+          <h2 className="mt-2 text-xl font-medium">Nenhum pedido encontrado</h2>
+          <p className="text-gray-500 mt-1">
+            Crie um novo pedido usando o botão acima.
+          </p>
+        </div>
+      )}
+
+      {/* Visualização para Desktop */}
+      {!isOrdersLoading && orders && orders.length > 0 && !isMobile && (
+        <div className="overflow-x-auto rounded-lg border bg-white">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead>CPF</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Restaurante</TableHead>
-                <TableHead>Data</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-[200px]">Ações</TableHead>
+                <TableHead>Consumo</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders && orders.length > 0 ? (
-                orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell>#{order.id}</TableCell>
-                    <TableCell>{order.customerName}</TableCell>
-                    <TableCell>{order.customerCpf || "-"}</TableCell>
-                    <TableCell>
+              {orders.map((order) => (
+                <TableRow key={order.id} className="hover:bg-gray-50">
+                  <TableCell className="font-medium">#{order.id}</TableCell>
+                  <TableCell>{order.customerName}</TableCell>
+                  <TableCell>
+                    <div className="inline-flex items-center gap-2">
+                      {getStatusLabel(order.status)}
+                      {order.status !== "FINISHED" && (
+                        <div className="flex items-center gap-1">
+                          {order.status === "PENDING" && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() =>
+                                updateStatusMutation.mutate({
+                                  id: order.id,
+                                  status: "IN_PREPARATION",
+                                })
+                              }
+                              title="Marcar Em Preparação"
+                            >
+                              <Clock className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {order.status === "IN_PREPARATION" && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() =>
+                                updateStatusMutation.mutate({
+                                  id: order.id,
+                                  status: "FINISHED",
+                                })
+                              }
+                              title="Marcar como Finalizado"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {formatConsumption(order.consumptionMethod)}
+                  </TableCell>
+                  <TableCell>{formatCurrency(order.total)}</TableCell>
+                  <TableCell>{formatDate(order.createdAt)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() => handleEdit(order)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDelete(order.id)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Visualização para Mobile (Cards) */}
+      {!isOrdersLoading && orders && orders.length > 0 && isMobile && (
+        <div className="grid grid-cols-1 gap-4">
+          {orders.map((order) => (
+            <Card
+              key={order.id}
+              className="overflow-hidden border bg-white hover:shadow-md transition-shadow"
+            >
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      #{order.id} - {order.customerName}
+                    </CardTitle>
+                    <div className="text-sm text-gray-500">
+                      {formatDate(order.createdAt)}
+                    </div>
+                  </div>
+                  {getStatusLabel(order.status)}
+                </div>
+              </CardHeader>
+              <CardContent className="pb-3">
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div>
+                    <p className="text-sm font-medium">Consumo</p>
+                    <p className="text-sm">
                       {formatConsumption(order.consumptionMethod)}
-                    </TableCell>
-                    <TableCell>
-                      {new Intl.NumberFormat("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      }).format(order.total)}
-                    </TableCell>
-                    <TableCell>
-                      {restaurantMap[order.restaurantId] || order.restaurantId}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(order.createdAt), "dd/MM/yyyy HH:mm")}
-                    </TableCell>
-                    <TableCell>{getStatusLabel(order.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2 flex-wrap">
-                        {/* Botões de Status */}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Total</p>
+                    <p className="text-sm font-semibold">
+                      {formatCurrency(order.total)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div className="flex items-center gap-1">
+                    {order.status !== "FINISHED" && (
+                      <>
                         {order.status === "PENDING" && (
                           <Button
                             size="sm"
@@ -760,9 +914,10 @@ const Orders = () => {
                                 status: "IN_PREPARATION",
                               })
                             }
+                            className="h-8"
                           >
-                            <Clock className="h-4 w-4 mr-1" />
-                            Preparando
+                            <Clock className="h-3 w-3 mr-1" />
+                            Preparar
                           </Button>
                         )}
                         {order.status === "IN_PREPARATION" && (
@@ -775,42 +930,39 @@ const Orders = () => {
                                 status: "FINISHED",
                               })
                             }
+                            className="h-8"
                           >
-                            <Check className="h-4 w-4 mr-1" />
+                            <Check className="h-3 w-3 mr-1" />
                             Finalizar
                           </Button>
                         )}
-
-                        {/* Botões de Edição e Exclusão */}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-blue-600 hover:text-blue-800"
-                          onClick={() => handleEdit(order)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-600 hover:text-red-800"
-                          onClick={() => handleDelete(order.id)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-4">
-                    Nenhum pedido encontrado
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEdit(order)}
+                      className="h-8"
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleDelete(order.id)}
+                    >
+                      <Trash className="h-3 w-3 mr-1" />
+                      Excluir
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </div>
