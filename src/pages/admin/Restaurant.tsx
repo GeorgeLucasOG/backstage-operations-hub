@@ -160,8 +160,8 @@ const RestaurantForm = ({
                 <ImageUploadField
                   id="avatarImage"
                   label=""
-                  onUpload={handleAvatarUpload}
-                  currentImageUrl={formData.avatarImageUrl}
+                  onUrlChange={handleAvatarUpload}
+                  currentUrl={formData.avatarImageUrl}
                   folder="restaurant"
                   purpose="restaurant-avatar"
                 />
@@ -185,8 +185,8 @@ const RestaurantForm = ({
                 <ImageUploadField
                   id="coverImage"
                   label=""
-                  onUpload={handleCoverUpload}
-                  currentImageUrl={formData.coverImageUrl}
+                  onUrlChange={handleCoverUpload}
+                  currentUrl={formData.coverImageUrl}
                   folder="restaurant"
                   purpose="restaurant-cover"
                 />
