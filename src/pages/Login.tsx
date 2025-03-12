@@ -24,6 +24,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [isResetMode, setIsResetMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
@@ -65,8 +66,17 @@ const Login: React.FC = () => {
         return;
       }
 
+      if (!businessName.trim()) {
+        toast({
+          title: "Erro no registro",
+          description: "O nome do restaurante é obrigatório",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Chamar a função de registro do hook useAuth
-      const success = await register(name, email, password);
+      const success = await register(name, email, password, businessName);
 
       if (success) {
         // Limpar os campos do formulário
@@ -74,6 +84,7 @@ const Login: React.FC = () => {
         setEmail("");
         setPassword("");
         setConfirmPassword("");
+        setBusinessName("");
 
         // Mudar para a aba de login
         const loginTab = document.querySelector('[data-value="login"]');
@@ -102,7 +113,7 @@ const Login: React.FC = () => {
         <Card className="w-full max-w-md">
           <CardHeader>
             <h2 className="text-2xl font-semibold text-center">
-              Reset Password
+              Recuperar Senha
             </h2>
           </CardHeader>
           <form onSubmit={handleResetPassword}>
@@ -114,7 +125,7 @@ const Login: React.FC = () => {
                 <Input
                   id="reset-email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="Digite seu email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -221,6 +232,17 @@ const Login: React.FC = () => {
                     placeholder="João Silva"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-business">Nome do Restaurante</Label>
+                  <Input
+                    id="register-business"
+                    type="text"
+                    placeholder="Restaurante João's"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
                     required
                   />
                 </div>
