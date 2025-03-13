@@ -15,6 +15,13 @@ import {
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /**
  * Página de login da aplicação
@@ -24,6 +31,8 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
+  const [restaurant, setRestaurant] = useState("");
+  const [profile, setProfile] = useState("");
   const [isResetMode, setIsResetMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
@@ -65,8 +74,23 @@ const Login: React.FC = () => {
         return;
       }
 
+      if (!profile) {
+        toast({
+          title: "Erro no registro",
+          description: "Selecione um perfil",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Chamar a função de registro do hook useAuth
-      const success = await register(name, email, password);
+      const success = await register(
+        name,
+        email,
+        password,
+        restaurant,
+        profile
+      );
 
       if (success) {
         // Limpar os campos do formulário
@@ -74,6 +98,8 @@ const Login: React.FC = () => {
         setEmail("");
         setPassword("");
         setConfirmPassword("");
+        setRestaurant("");
+        setProfile("");
 
         // Mudar para a aba de login
         const loginTab = document.querySelector('[data-value="login"]');
@@ -234,6 +260,30 @@ const Login: React.FC = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-restaurant">Restaurante</Label>
+                  <Input
+                    id="register-restaurant"
+                    type="text"
+                    placeholder="Nome do Restaurante"
+                    value={restaurant}
+                    onChange={(e) => setRestaurant(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-profile">Perfil</Label>
+                  <Select value={profile} onValueChange={setProfile} required>
+                    <SelectTrigger id="register-profile">
+                      <SelectValue placeholder="Selecione um perfil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="manager">Gerente</SelectItem>
+                      <SelectItem value="pdv">PDV</SelectItem>
+                      <SelectItem value="monitor">Monitor</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="register-password">Senha</Label>
