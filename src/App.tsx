@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import AdminLayout from "./components/AdminLayout";
@@ -17,31 +17,43 @@ import AccountsReceivable from "./pages/admin/AccountsReceivable";
 import PDV from "./pages/admin/PDV";
 import NotFound from "./pages/NotFound";
 import ApiSettings from "./pages/admin/ApiSettings";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { AuthProvider } from "./hooks/useAuth";
 
-// Create a client with error handling configurado para compatibilidade com aplicativos cliente
+// Configuração do cliente de consulta
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      retry: false,
-      staleTime: 5 * 60 * 1000, // 5 minutos de cache para melhor desempenho
+      retry: 1,
     },
   },
 });
 
-// Make App a proper React component with explicit return
+/**
+ * Componente principal da aplicação
+ * Configura o roteamento e os provedores globais
+ */
 const App: React.FC = () => {
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <BrowserRouter>
+          <AuthProvider>
             <Routes>
+              {/* Rotas públicas */}
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/admin" element={<AdminLayout />}>
+
+              {/* Rotas protegidas */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
                 <Route index element={<Dashboard />} />
                 <Route path="restaurants" element={<Restaurant />} />
                 <Route path="products" element={<Products />} />
@@ -55,12 +67,23 @@ const App: React.FC = () => {
                 <Route path="pdv" element={<PDV />} />
                 <Route path="api-settings" element={<ApiSettings />} />
               </Route>
-              <Route path="*" element={<NotFound />} />
+
+              {/* Rota para páginas não encontradas */}
+              <Route
+                path="*"
+                element={
+                  <ProtectedRoute>
+                    <NotFound />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+          </AuthProvider>
+        </BrowserRouter>
+        <Toaster />
+        <Sonner />
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 
