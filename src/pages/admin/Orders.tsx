@@ -65,6 +65,7 @@ interface Order {
   status: "PENDING" | "IN_PREPARATION" | "FINISHED";
   consumptionMethod: "TAKEAWAY" | "DINE_IN";
   restaurantId: string;
+  tableNumber?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -77,7 +78,7 @@ interface Restaurant {
 interface OrderFormData {
   customerName: string;
   customerCpf: string;
-  tableNumber: string; // Mantemos no formulário para referência, mas não enviamos ao banco
+  tableNumber: string; // Número da mesa para consumo no local
   total: string;
   consumptionMethod: "TAKEAWAY" | "DINE_IN";
   restaurantId: string;
@@ -99,7 +100,9 @@ const OrderForm = ({
       return {
         customerName: initialData.customerName,
         customerCpf: initialData.customerCpf || "",
-        tableNumber: "", // A coluna não existe no banco, iniciamos vazia
+        tableNumber: initialData.tableNumber
+          ? initialData.tableNumber.toString()
+          : "",
         total: initialData.total.toString(),
         consumptionMethod: initialData.consumptionMethod,
         restaurantId: initialData.restaurantId,
@@ -403,8 +406,7 @@ const Orders = () => {
 
       const now = new Date().toISOString();
 
-      // IMPORTANTE: NÃO INCLUIR tableNumber no payload enviado ao banco
-      // pois essa coluna não existe na tabela Order
+      // IMPORTANTE: Agora incluímos tableNumber no payload se estiver definido
       const data = {
         customerName: orderData.customerName,
         customerCpf: orderData.customerCpf || null, // Tornando CPF opcional
@@ -412,6 +414,9 @@ const Orders = () => {
         status: "PENDING" as const,
         consumptionMethod: orderData.consumptionMethod,
         restaurantId: orderData.restaurantId,
+        ...(orderData.consumptionMethod === "DINE_IN" && orderData.tableNumber
+          ? { tableNumber: parseInt(orderData.tableNumber) }
+          : {}),
         createdAt: now,
         updatedAt: now,
       };
@@ -476,14 +481,16 @@ const Orders = () => {
 
       const now = new Date().toISOString();
 
-      // IMPORTANTE: NÃO INCLUIR tableNumber no payload enviado ao banco
-      // pois essa coluna não existe na tabela Order
+      // IMPORTANTE: Agora incluímos tableNumber no payload se estiver definido
       const data = {
         customerName: orderData.customerName,
         customerCpf: orderData.customerCpf || null, // Tornando CPF opcional
         total: parseFloat(orderData.total),
         consumptionMethod: orderData.consumptionMethod,
         restaurantId: orderData.restaurantId,
+        ...(orderData.consumptionMethod === "DINE_IN" && orderData.tableNumber
+          ? { tableNumber: parseInt(orderData.tableNumber) }
+          : {}),
         updatedAt: now,
       };
 
@@ -833,6 +840,12 @@ const Orders = () => {
                   </TableCell>
                   <TableCell>
                     {formatConsumption(order.consumptionMethod)}
+                    {order.consumptionMethod === "DINE_IN" &&
+                      order.tableNumber && (
+                        <Badge variant="outline" className="ml-2">
+                          Mesa {order.tableNumber}
+                        </Badge>
+                      )}
                   </TableCell>
                   <TableCell>{formatCurrency(order.total)}</TableCell>
                   <TableCell>{formatDate(order.createdAt)}</TableCell>
@@ -890,6 +903,12 @@ const Orders = () => {
                     <p className="text-sm font-medium">Consumo</p>
                     <p className="text-sm">
                       {formatConsumption(order.consumptionMethod)}
+                      {order.consumptionMethod === "DINE_IN" &&
+                        order.tableNumber && (
+                          <Badge variant="outline" className="ml-2">
+                            Mesa {order.tableNumber}
+                          </Badge>
+                        )}
                     </p>
                   </div>
                   <div className="text-right">
