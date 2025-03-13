@@ -19,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import ApiSettings from "./pages/admin/ApiSettings";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./hooks/useAuth";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Configuração do cliente de consulta
 const queryClient = new QueryClient({
@@ -26,6 +27,9 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      // Essas configurações ajudam a prevenir que erros de rede causem problemas
+      staleTime: 5 * 60 * 1000, // Dados são considerados frescos por 5 minutos
+      gcTime: 10 * 60 * 1000, // Tempo antes do garbage collector limpar os dados (substitui o cacheTime)
     },
   },
 });
@@ -36,54 +40,60 @@ const queryClient = new QueryClient({
  */
 const App: React.FC = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              {/* Rotas públicas */}
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              <Routes>
+                {/* Rotas públicas */}
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
 
-              {/* Rotas protegidas */}
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute>
-                    <AdminLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Dashboard />} />
-                <Route path="restaurants" element={<Restaurant />} />
-                <Route path="products" element={<Products />} />
-                <Route path="menu" element={<Categories />} />
-                <Route path="orders" element={<Orders />} />
-                <Route path="accounts-payable" element={<AccountsPayable />} />
+                {/* Rotas protegidas */}
                 <Route
-                  path="accounts-receivable"
-                  element={<AccountsReceivable />}
-                />
-                <Route path="pdv" element={<PDV />} />
-                <Route path="api-settings" element={<ApiSettings />} />
-              </Route>
+                  path="/admin"
+                  element={
+                    <ProtectedRoute>
+                      <AdminLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Dashboard />} />
+                  <Route path="restaurants" element={
+                    <ErrorBoundary>
+                      <Restaurant />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="products" element={<Products />} />
+                  <Route path="menu" element={<Categories />} />
+                  <Route path="orders" element={<Orders />} />
+                  <Route path="accounts-payable" element={<AccountsPayable />} />
+                  <Route
+                    path="accounts-receivable"
+                    element={<AccountsReceivable />}
+                  />
+                  <Route path="pdv" element={<PDV />} />
+                  <Route path="api-settings" element={<ApiSettings />} />
+                </Route>
 
-              {/* Rota para páginas não encontradas */}
-              <Route
-                path="*"
-                element={
-                  <ProtectedRoute>
-                    <NotFound />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-        <Toaster />
-        <Sonner />
-      </TooltipProvider>
-    </QueryClientProvider>
+                {/* Rota para páginas não encontradas */}
+                <Route
+                  path="*"
+                  element={
+                    <ProtectedRoute>
+                      <NotFound />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </AuthProvider>
+          </BrowserRouter>
+          <Toaster />
+          <Sonner />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 
