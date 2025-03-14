@@ -21,6 +21,7 @@ import {
   Trash,
   AlertCircle,
   Menu,
+  ShieldAlert,
 } from "lucide-react";
 import {
   Sheet,
@@ -46,6 +47,7 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useAuth } from "@/hooks/useAuth";
 
 // Função para gerar UUID v4
 function generateUUID() {
@@ -285,6 +287,7 @@ const getStatusLabel = (status: string) => {
 const Orders = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth(); // Obtendo o usuário atual
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -292,6 +295,22 @@ const Orders = () => {
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Verificar se o usuário tem restrição de restaurante
+  const isRestrictedUser =
+    user?.role === "manager" ||
+    user?.role === "pdv" ||
+    user?.role === "monitor";
+
+  // Verificar se o usuário tem permissão para editar/excluir
+  const canEditOrDelete = user?.role === "admin" || user?.role === "manager";
+
+  // Adicionar comentário explicativo sobre a restrição de restaurante
+  useEffect(() => {
+    if (isRestrictedUser && user?.restaurant) {
+      console.log(`Usuário restrito ao restaurante ID: ${user.restaurant}`);
+    }
+  }, [user, isRestrictedUser]);
 
   // Detectar se estamos em um dispositivo móvel
   useEffect(() => {
@@ -325,15 +344,21 @@ const Orders = () => {
     }).format(value);
   };
 
-  // Consultar restaurantes disponíveis
+  // Consultar restaurantes disponíveis (filtrados por permissão)
   const { data: restaurants = [], isLoading: isLoadingRestaurants } = useQuery({
     queryKey: ["restaurants"],
     queryFn: async () => {
       console.log("Consultando restaurantes...");
-      const { data, error } = await supabase
-        .from("Restaurant")
-        .select("id, name")
-        .order("name");
+      let query = supabase.from("Restaurant").select("id, name");
+
+      // Se o usuário for gerente, PDV ou monitor, filtrar apenas o restaurante dele
+      if (isRestrictedUser && user?.restaurant) {
+        query = query.eq("id", user.restaurant);
+      }
+
+      query = query.order("name");
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Erro ao consultar restaurantes:", error);
@@ -345,21 +370,28 @@ const Orders = () => {
     },
   });
 
+  // Consultar pedidos com filtro por restaurante
   const {
     data: orders,
     isLoading: isOrdersLoading,
     error: ordersError,
   } = useQuery({
-    queryKey: ["orders"],
+    queryKey: ["orders", user?.restaurant],
     queryFn: async () => {
       console.log("Consultando pedidos...");
       setIsLoading(true);
 
       try {
-        const { data, error } = await supabase
-          .from("Order")
-          .select("*")
-          .order("createdAt", { ascending: false });
+        let query = supabase.from("Order").select("*");
+
+        // Se o usuário for gerente, PDV ou monitor, filtrar apenas os pedidos do restaurante dele
+        if (isRestrictedUser && user?.restaurant) {
+          query = query.eq("restaurantId", user.restaurant);
+        }
+
+        query = query.order("createdAt", { ascending: false });
+
+        const { data, error } = await query;
 
         if (error) {
           console.error("Erro ao consultar pedidos:", error);
@@ -375,6 +407,7 @@ const Orders = () => {
         setIsLoading(false);
       }
     },
+    enabled: !!user, // Só consulta quando tiver usuário definido
   });
 
   // Obter mapa de nomes de restaurantes para exibição
@@ -387,6 +420,12 @@ const Orders = () => {
     mutationFn: async (orderData: OrderFormData) => {
       console.log("Criando novo pedido com dados:", orderData);
 
+      // Se o usuário for gerente, PDV ou monitor, forçar o restaurante dele
+      const finalOrderData = { ...orderData };
+      if (isRestrictedUser && user?.restaurant) {
+        finalOrderData.restaurantId = user.restaurant;
+      }
+
       // Verificar se temos restaurantes disponíveis
       if (!restaurants || restaurants.length === 0) {
         throw new Error(
@@ -396,11 +435,11 @@ const Orders = () => {
 
       // Verificar se o restauranteId é válido (existe na lista)
       const restaurantExists = restaurants.some(
-        (r) => r.id === orderData.restaurantId
+        (r) => r.id === finalOrderData.restaurantId
       );
       if (!restaurantExists) {
         throw new Error(
-          `Restaurante com ID ${orderData.restaurantId} não encontrado`
+          `Restaurante com ID ${finalOrderData.restaurantId} não encontrado`
         );
       }
 
@@ -408,14 +447,15 @@ const Orders = () => {
 
       // IMPORTANTE: Agora incluímos tableNumber no payload se estiver definido
       const data = {
-        customerName: orderData.customerName,
-        customerCpf: orderData.customerCpf || null, // Tornando CPF opcional
-        total: parseFloat(orderData.total),
+        customerName: finalOrderData.customerName,
+        customerCpf: finalOrderData.customerCpf || null, // Tornando CPF opcional
+        total: parseFloat(finalOrderData.total),
         status: "PENDING" as const,
-        consumptionMethod: orderData.consumptionMethod,
-        restaurantId: orderData.restaurantId,
-        ...(orderData.consumptionMethod === "DINE_IN" && orderData.tableNumber
-          ? { tableNumber: parseInt(orderData.tableNumber) }
+        consumptionMethod: finalOrderData.consumptionMethod,
+        restaurantId: finalOrderData.restaurantId,
+        ...(finalOrderData.consumptionMethod === "DINE_IN" &&
+        finalOrderData.tableNumber
+          ? { tableNumber: parseInt(finalOrderData.tableNumber) }
           : {}),
         createdAt: now,
         updatedAt: now,
@@ -468,6 +508,26 @@ const Orders = () => {
   const updateMutation = useMutation({
     mutationFn: async (orderData: OrderFormData & { id: number }) => {
       console.log("Atualizando pedido:", orderData);
+
+      // Se o usuário for gerente, PDV ou monitor, verificar se o pedido pertence ao restaurante dele
+      if (isRestrictedUser && user?.restaurant) {
+        const { data, error } = await supabase
+          .from("Order")
+          .select("restaurantId")
+          .eq("id", orderData.id)
+          .single();
+
+        if (error) {
+          throw new Error("Erro ao verificar permissões do pedido");
+        }
+
+        if (data.restaurantId !== user.restaurant) {
+          throw new Error("Você não tem permissão para editar este pedido");
+        }
+
+        // Forçar o restaurante do usuário
+        orderData.restaurantId = user.restaurant;
+      }
 
       // Verificar se o restauranteId é válido (existe na lista)
       const restaurantExists = restaurants.some(
@@ -546,6 +606,23 @@ const Orders = () => {
     }) => {
       console.log(`Atualizando status do pedido ${id} para ${status}`);
 
+      // Se o usuário for gerente, PDV ou monitor, verificar se o pedido pertence ao restaurante dele
+      if (isRestrictedUser && user?.restaurant) {
+        const { data, error } = await supabase
+          .from("Order")
+          .select("restaurantId")
+          .eq("id", id)
+          .single();
+
+        if (error) {
+          throw new Error("Erro ao verificar permissões do pedido");
+        }
+
+        if (data.restaurantId !== user.restaurant) {
+          throw new Error("Você não tem permissão para editar este pedido");
+        }
+      }
+
       const now = new Date().toISOString();
 
       try {
@@ -591,6 +668,28 @@ const Orders = () => {
     mutationFn: async (id: number) => {
       console.log(`Excluindo pedido ${id}`);
 
+      // Se o usuário não for admin ou gerente, não tem permissão para excluir
+      if (!canEditOrDelete) {
+        throw new Error("Você não tem permissão para excluir pedidos");
+      }
+
+      // Se o usuário for gerente, verificar se o pedido pertence ao restaurante dele
+      if (user?.role === "manager" && user?.restaurant) {
+        const { data, error } = await supabase
+          .from("Order")
+          .select("restaurantId")
+          .eq("id", id)
+          .single();
+
+        if (error) {
+          throw new Error("Erro ao verificar permissões do pedido");
+        }
+
+        if (data.restaurantId !== user.restaurant) {
+          throw new Error("Você não tem permissão para excluir este pedido");
+        }
+      }
+
       try {
         const { error } = await supabase.from("Order").delete().eq("id", id);
 
@@ -626,15 +725,51 @@ const Orders = () => {
     },
   });
 
-  // Função para lidar com a ação de editar
+  // Função para lidar com a ação de editar - verificar permissão
   const handleEdit = (order: Order) => {
     console.log("Editando pedido:", order);
+
+    // Se o usuário não for admin ou gerente, não tem permissão para editar
+    if (!canEditOrDelete) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para editar pedidos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Se o usuário for gerente, verificar se o pedido pertence ao restaurante dele
+    if (
+      user?.role === "manager" &&
+      user?.restaurant &&
+      order.restaurantId !== user.restaurant
+    ) {
+      toast({
+        title: "Acesso negado",
+        description: "Você só pode editar pedidos do seu restaurante",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setEditingOrder(order);
     setIsEditOpen(true);
   };
 
-  // Função para lidar com a ação de excluir
+  // Função para lidar com a ação de excluir - verificar permissão
   const handleDelete = (id: number) => {
+    // Se o usuário não for admin ou gerente, não tem permissão para excluir
+    if (!canEditOrDelete) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para excluir pedidos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // A verificação de restaurante será feita no momento da exclusão
     setDeletingOrderId(id);
     setIsDeleteDialogOpen(true);
   };
@@ -669,9 +804,22 @@ const Orders = () => {
   const noRestaurants =
     !isLoadingRestaurants && (!restaurants || restaurants.length === 0);
 
-  // Renderização para desktop e mobile
+  // Exibir informação sobre restrição de acesso para usuários não admin
   return (
     <div className="space-y-4">
+      {isRestrictedUser && (
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3 flex items-center gap-2 text-blue-800">
+          <ShieldAlert className="h-5 w-5" />
+          <span>
+            Você está visualizando apenas os pedidos do restaurante:{" "}
+            <strong>
+              {restaurants.find((r) => r.id === user?.restaurant)?.name ||
+                user?.restaurant}
+            </strong>
+          </span>
+        </div>
+      )}
+
       <div className="flex justify-between items-center sticky top-0 z-10 bg-white py-2 px-4 border-b mb-4">
         <div className="flex items-center gap-2">
           <h1 className="text-xl md:text-2xl font-bold">Pedidos</h1>

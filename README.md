@@ -126,3 +126,30 @@ npm run dev
 ```
 
 Acesse o sistema em [http://localhost:3000](http://localhost:3000).
+
+## Autenticação de Usuários
+
+O sistema de autenticação utiliza o Supabase como fonte de dados para armazenamento de usuários.
+
+### Estrutura de Tabelas de Usuários
+
+- **User**: Armazena dados básicos dos usuários como nome, email, senha e perfil.
+- **UserRestaurant**: Gerencia a relação entre usuários e restaurantes, especialmente para perfis restritos.
+
+### Perfis de Usuário
+
+- **Admin**: Acesso completo ao sistema e a todos os restaurantes.
+- **Manager**: Acesso restrito ao restaurante associado, com permissões para gerenciamento.
+- **PDV**: Acesso ao ponto de venda de um restaurante específico.
+- **Monitor**: Visualização dos dados de um restaurante específico.
+
+### Usuários Administrativos Padrão
+
+Por segurança, o sistema ainda mantém os usuários administrativos padrão:
+
+- Email: admin@example.com / Senha: admin123
+- Email: admin@admin.com / Senha: admin
+
+### Sessão de Usuário
+
+Os dados de autenticação (sessão atual) são mantidos no localStorage apenas para fins de estado da aplicação, enquanto todos os dados de usuários são persistidos no banco de dados Supabase.
