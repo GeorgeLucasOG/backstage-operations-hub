@@ -12,37 +12,25 @@ import {
 } from "@/components/ui/tooltip";
 
 interface ImageUploadFieldProps {
-  id?: string;
-  label?: string;
-  onUpload?: (url: string) => void;
-  currentImageUrl?: string;
-  currentUrl?: string;
-  onUrlChange?: (url: string) => void;
+  id: string;
+  label: string;
+  onUpload: (url: string) => void;
+  currentImageUrl: string;
   folder?: string;
   purpose?: "restaurant-avatar" | "restaurant-cover" | "product-image";
 }
 
 const ImageUploadField = ({
-  id = "image-upload",
-  label = "",
+  id,
+  label,
   onUpload,
   currentImageUrl,
-  currentUrl,
-  onUrlChange,
   folder = "",
   purpose,
 }: ImageUploadFieldProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
-
-  const effectiveCurrentUrl = currentUrl || currentImageUrl || "";
-  const [previewUrl, setPreviewUrl] = useState(effectiveCurrentUrl);
-
-  const handleUrlChange = (url: string) => {
-    if (onUrlChange) onUrlChange(url);
-    if (onUpload) onUpload(url);
-  };
-
+  const [previewUrl, setPreviewUrl] = useState(currentImageUrl);
   const { toast } = useToast();
 
   // Determine image dimensions for the UI based on purpose
@@ -112,11 +100,11 @@ const ImageUploadField = ({
       });
 
       if (!result.success) {
-        throw new Error("Falha na conversão da imagem");
+        throw new Error(result.error || "Falha na conversão da imagem");
       }
 
       // Use the WebP URL
-      handleUrlChange(result.publicUrl);
+      onUpload(result.publicUrl);
 
       toast({
         title: "Sucesso",
@@ -129,7 +117,7 @@ const ImageUploadField = ({
         description: `Erro ao fazer upload: ${(error as Error).message}`,
         variant: "destructive",
       });
-      setPreviewUrl(effectiveCurrentUrl);
+      setPreviewUrl(currentImageUrl);
     } finally {
       setIsUploading(false);
     }
@@ -143,28 +131,26 @@ const ImageUploadField = ({
 
   return (
     <div className="space-y-2">
-      {label && (
-        <div className="flex items-center gap-2">
-          <label htmlFor={id} className="block text-sm font-medium">
-            {label}
-          </label>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>
-                  Aceita imagens nos formatos JPEG, JPG, PNG ou WEBP. As imagens
-                  serão otimizadas automaticamente.
-                  {dimensionsDisplay &&
-                    ` Dimensões: ${dimensionsDisplay} pixels.`}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      )}
+      <div className="flex items-center gap-2">
+        <label htmlFor={id} className="block text-sm font-medium">
+          {label}
+        </label>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>
+                Aceita imagens nos formatos JPEG, JPG, PNG ou WEBP. As imagens
+                serão otimizadas automaticamente.
+                {dimensionsDisplay &&
+                  ` Dimensões: ${dimensionsDisplay} pixels.`}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
 
       <div className="flex flex-col gap-4">
         {previewUrl && (
