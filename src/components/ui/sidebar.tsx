@@ -259,43 +259,25 @@ Sidebar.displayName = "Sidebar";
 
 const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
-  React.ComponentProps<typeof Button> & {
-    children?: React.ReactNode;
-  }
+  React.ComponentProps<typeof Button>
 >(({ className, onClick, children, ...props }, ref) => {
-  const { toggleSidebar, isMobile, openMobile, open } = useSidebar();
-  const isOpen = isMobile ? openMobile : open;
+  const { toggleSidebar } = useSidebar();
 
   return (
     <Button
       ref={ref}
       data-sidebar="trigger"
-      data-mobile={isMobile ? "true" : "false"}
-      data-state={isOpen ? "open" : "closed"}
       variant="ghost"
-      size={isMobile ? "default" : "icon"}
-      className={cn(
-        "relative flex items-center justify-center transition-all duration-200",
-        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        "active:scale-95",
-        className
-      )}
+      size="icon"
+      className={cn("h-8 w-8", className)}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
       }}
       {...props}
     >
-      {children || (
-        <PanelLeft
-          className={cn(
-            "transition-transform duration-300 ease-in-out",
-            "data-[state=open]:rotate-180",
-            isMobile ? "h-5 w-5" : "h-4 w-4"
-          )}
-        />
-      )}
-      <span className="sr-only">Alternar Menu</span>
+      {children || <PanelLeft />}
+      <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );
 });
