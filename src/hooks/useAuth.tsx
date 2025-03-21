@@ -13,13 +13,7 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (
-    name: string,
-    email: string,
-    password: string,
-    restaurant: string,
-    profile: string
-  ) => Promise<boolean>;
+  register: (name: string, email: string, password: string) => Promise<boolean>;
 }
 
 interface User {
@@ -27,7 +21,6 @@ interface User {
   name: string;
   email: string;
   role: string;
-  restaurant?: string;
 }
 
 interface UserCredential {
@@ -36,7 +29,6 @@ interface UserCredential {
   name: string;
   role: string;
   id: string;
-  restaurant?: string;
 }
 
 interface AuthProviderProps {
@@ -109,9 +101,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const register = async (
     name: string,
     email: string,
-    password: string,
-    restaurant: string,
-    profile: string
+    password: string
   ): Promise<boolean> => {
     try {
       // Verificar se o email já está em uso
@@ -131,8 +121,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         name,
         email,
         password,
-        role: profile || "user", // Usar o perfil selecionado ou "user" como padrão
-        restaurant: restaurant || undefined,
+        role: "user", // Novos usuários recebem a role "user" por padrão
       };
 
       // Salvar o novo usuário no localStorage
@@ -177,7 +166,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           name: foundUser.name,
           email: foundUser.email,
           role: foundUser.role,
-          restaurant: foundUser.restaurant,
         };
 
         // Armazenar dados de autenticação
