@@ -17,7 +17,6 @@ import AccountsReceivable from "./pages/admin/AccountsReceivable";
 import PDV from "./pages/admin/PDV";
 import NotFound from "./pages/NotFound";
 import ApiSettings from "./pages/admin/ApiSettings";
-import Settings from "./pages/admin/Settings";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./hooks/useAuth";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -61,28 +60,21 @@ const App: React.FC = () => {
                   }
                 >
                   <Route index element={<Dashboard />} />
-                  <Route
-                    path="restaurants"
-                    element={
-                      <ErrorBoundary>
-                        <Restaurant />
-                      </ErrorBoundary>
-                    }
-                  />
+                  <Route path="restaurants" element={
+                    <ErrorBoundary>
+                      <Restaurant />
+                    </ErrorBoundary>
+                  } />
                   <Route path="products" element={<Products />} />
                   <Route path="menu" element={<Categories />} />
                   <Route path="orders" element={<Orders />} />
-                  <Route
-                    path="accounts-payable"
-                    element={<AccountsPayable />}
-                  />
+                  <Route path="accounts-payable" element={<AccountsPayable />} />
                   <Route
                     path="accounts-receivable"
                     element={<AccountsReceivable />}
                   />
                   <Route path="pdv" element={<PDV />} />
                   <Route path="api-settings" element={<ApiSettings />} />
-                  <Route path="settings" element={<Settings />} />
                 </Route>
 
                 {/* Rota para páginas não encontradas */}

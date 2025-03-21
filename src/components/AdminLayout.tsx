@@ -27,7 +27,6 @@ import {
   LogOut,
 } from "lucide-react";
 import Sidebar from "./Sidebar";
-import { Link } from "react-router-dom";
 
 /**
  * Layout principal para as páginas administrativas
@@ -100,11 +99,7 @@ const AdminLayout: React.FC = () => {
                   <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>Perfil</DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link to="/admin/settings" className="flex w-full">
-                      Configurações
-                    </Link>
-                  </DropdownMenuItem>
+                  <DropdownMenuItem>Configurações</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleLogout}

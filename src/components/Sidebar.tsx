@@ -42,6 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
       path: "/admin/accounts-payable",
     },
     { icon: FileText, label: "PDV", path: "/admin/pdv" },
+    { icon: Settings, label: "Configurações API", path: "/admin/api-settings" },
   ];
 
   return (
