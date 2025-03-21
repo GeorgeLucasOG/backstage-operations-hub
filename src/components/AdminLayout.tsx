@@ -18,7 +18,6 @@ import {
   Receipt,
   DollarSign,
   Settings,
-  Menu,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -96,15 +95,7 @@ const AdminLayout = () => {
           </SidebarContent>
         </Sidebar>
         <main className="flex-1 p-6 bg-gray-50">
-          <div className="sticky top-0 z-10 mb-4 flex items-center bg-white py-2 px-4 border-b rounded-lg shadow-sm">
-            <SidebarTrigger className="h-9 w-9 bg-gray-50 hover:bg-gray-100">
-              <Menu className="h-5 w-5" />
-            </SidebarTrigger>
-            <h1 className="ml-4 text-lg font-medium hidden md:block">
-              {menuItems.find((item) => location.pathname === item.path)
-                ?.label || "Painel Administrativo"}
-            </h1>
-          </div>
+          <SidebarTrigger className="mb-4" />
           <div className="max-w-7xl mx-auto">
             <Outlet />
           </div>
