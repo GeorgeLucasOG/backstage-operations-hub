@@ -1,44 +1,59 @@
-
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const Login = () => {
+/**
+ * Página de login da aplicação
+ */
+const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [isResetMode, setIsResetMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const { login, register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Obtém o caminho de origem, se existir
+  const from = location.state?.from || "/admin";
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // For demo purposes, using hardcoded credentials
-    if (email === "admin@admin.com" && password === "admin") {
-      localStorage.setItem("isAuthenticated", "true");
-      navigate("/admin");
-      toast({
-        title: "Login successful",
-        description: "Welcome to the admin panel",
-      });
-    } else {
-      toast({
-        title: "Error",
-        description: "Invalid credentials",
-        variant: "destructive",
-      });
+    setIsLoading(true);
+
+    try {
+      const success = await login(email, password);
+
+      if (success) {
+        // Redireciona para a página de origem ou para o dashboard
+        navigate(from, { replace: true });
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-<<<<<<< HEAD
     setIsRegistering(true);
 
     try {
@@ -79,29 +94,15 @@ const Login = () => {
       }
     } finally {
       setIsRegistering(false);
-=======
-    if (password !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive",
-      });
-      return;
->>>>>>> parent of c1b20d4 (Implementar autenticação e proteção de rotas com contexto de autenticação)
     }
-    // Here you would typically make an API call to register the user
-    toast({
-      title: "Registration successful",
-      description: "Please log in with your new account",
-    });
   };
 
   const handleResetPassword = (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically make an API call to send a reset password email
+    // Aqui você implementaria a lógica para resetar a senha
     toast({
-      title: "Password reset email sent",
-      description: "Please check your email for further instructions",
+      title: "Email de recuperação enviado",
+      description: "Verifique sua caixa de entrada para redefinir sua senha",
     });
     setIsResetMode(false);
   };
@@ -111,13 +112,9 @@ const Login = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-<<<<<<< HEAD
             <h2 className="text-2xl font-semibold text-center">
               Recuperar Senha
             </h2>
-=======
-            <h2 className="text-2xl font-semibold text-center">Reset Password</h2>
->>>>>>> parent of c1b20d4 (Implementar autenticação e proteção de rotas com contexto de autenticação)
           </CardHeader>
           <form onSubmit={handleResetPassword}>
             <CardContent className="space-y-4">
@@ -137,7 +134,7 @@ const Login = () => {
             </CardContent>
             <CardFooter className="flex flex-col space-y-2">
               <Button type="submit" className="w-full">
-                Send Reset Link
+                Enviar link de recuperação
               </Button>
               <Button
                 type="button"
@@ -145,7 +142,7 @@ const Login = () => {
                 onClick={() => setIsResetMode(false)}
                 className="w-full"
               >
-                Back to Login
+                Voltar para o login
               </Button>
             </CardFooter>
           </form>
@@ -155,36 +152,51 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <h2 className="text-2xl font-semibold text-center">Admin Panel</h2>
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Admin Food</CardTitle>
+          <CardDescription>
+            Entre com suas credenciais para acessar o painel administrativo
+          </CardDescription>
         </CardHeader>
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
+            <TabsTrigger value="login" data-value="login">
+              Login
+            </TabsTrigger>
+            <TabsTrigger value="register" data-value="register">
+              Cadastro
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="login">
-            <form onSubmit={handleLogin}>
+            <form onSubmit={handleSubmit}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="email">
-                    Email
-                  </label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="admin@admin.com"
+                    placeholder="admin@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="password">
-                    Password
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Senha</Label>
+                    <a
+                      href="#"
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setIsResetMode(true);
+                      }}
+                    >
+                      Esqueceu a senha?
+                    </a>
+                  </div>
                   <Input
                     id="password"
                     type="password"
@@ -194,18 +206,17 @@ const Login = () => {
                     required
                   />
                 </div>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="p-0 h-auto font-normal text-sm"
-                  onClick={() => setIsResetMode(true)}
-                >
-                  Forgot password?
-                </Button>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full">
-                  Login
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    "Entrar"
+                  )}
                 </Button>
               </CardFooter>
             </form>
@@ -214,20 +225,17 @@ const Login = () => {
             <form onSubmit={handleRegister}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="register-name">
-                    Name
-                  </label>
+                  <Label htmlFor="register-name">Nome</Label>
                   <Input
                     id="register-name"
                     type="text"
-                    placeholder="John Doe"
+                    placeholder="João Silva"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-<<<<<<< HEAD
                   <Label htmlFor="register-business">Nome do Restaurante</Label>
                   <Input
                     id="register-business"
@@ -240,24 +248,17 @@ const Login = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="register-email">Email</Label>
-=======
-                  <label className="text-sm font-medium" htmlFor="register-email">
-                    Email
-                  </label>
->>>>>>> parent of c1b20d4 (Implementar autenticação e proteção de rotas com contexto de autenticação)
                   <Input
                     id="register-email"
                     type="email"
-                    placeholder="john@example.com"
+                    placeholder="joao@exemplo.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="register-password">
-                    Password
-                  </label>
+                  <Label htmlFor="register-password">Senha</Label>
                   <Input
                     id="register-password"
                     type="password"
@@ -268,9 +269,7 @@ const Login = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="confirm-password">
-                    Confirm Password
-                  </label>
+                  <Label htmlFor="confirm-password">Confirmar Senha</Label>
                   <Input
                     id="confirm-password"
                     type="password"
@@ -282,8 +281,19 @@ const Login = () => {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full">
-                  Register
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isRegistering}
+                >
+                  {isRegistering ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Cadastrando...
+                    </>
+                  ) : (
+                    "Cadastrar"
+                  )}
                 </Button>
               </CardFooter>
             </form>
