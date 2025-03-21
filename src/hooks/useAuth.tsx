@@ -13,7 +13,12 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    businessName: string
+  ) => Promise<boolean>;
 }
 
 interface User {
@@ -21,14 +26,16 @@ interface User {
   name: string;
   email: string;
   role: string;
+  businessName: string;
 }
 
 interface UserCredential {
+  id: string;
+  name: string;
   email: string;
   password: string;
-  name: string;
   role: string;
-  id: string;
+  businessName: string;
 }
 
 interface AuthProviderProps {
@@ -56,6 +63,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         email: "admin@example.com",
         password: "admin123",
         role: "admin",
+        businessName: "Restaurante Admin",
       },
       {
         id: "2",
@@ -63,6 +71,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         email: "admin@admin.com",
         password: "admin",
         role: "admin",
+        businessName: "Admin Food",
       },
     ];
 
@@ -101,7 +110,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const register = async (
     name: string,
     email: string,
-    password: string
+    password: string,
+    businessName: string
   ): Promise<boolean> => {
     try {
       // Verificar se o email já está em uso
@@ -122,6 +132,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         email,
         password,
         role: "user", // Novos usuários recebem a role "user" por padrão
+        businessName,
       };
 
       // Salvar o novo usuário no localStorage
@@ -132,7 +143,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       toast({
         title: "Registro realizado com sucesso",
-        description: "Agora você pode fazer login com suas credenciais",
+        description: `Seu restaurante "${businessName}" foi cadastrado! Agora você pode fazer login com suas credenciais.`,
         variant: "default",
       });
 
@@ -166,6 +177,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           name: foundUser.name,
           email: foundUser.email,
           role: foundUser.role,
+          businessName: foundUser.businessName,
         };
 
         // Armazenar dados de autenticação
@@ -177,7 +189,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         toast({
           title: "Login realizado com sucesso",
-          description: `Bem-vindo, ${foundUser.name}!`,
+          description: `Bem-vindo, ${foundUser.name}! Você está gerenciando "${foundUser.businessName}".`,
           variant: "default",
         });
 

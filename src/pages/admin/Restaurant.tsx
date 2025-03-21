@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -160,8 +160,8 @@ const RestaurantForm = ({
                 <ImageUploadField
                   id="avatarImage"
                   label=""
-                  onUpload={handleAvatarUpload}
-                  currentImageUrl={formData.avatarImageUrl}
+                  onUrlChange={handleAvatarUpload}
+                  currentUrl={formData.avatarImageUrl}
                   folder="restaurant"
                   purpose="restaurant-avatar"
                 />
@@ -185,8 +185,8 @@ const RestaurantForm = ({
                 <ImageUploadField
                   id="coverImage"
                   label=""
-                  onUpload={handleCoverUpload}
-                  currentImageUrl={formData.coverImageUrl}
+                  onUrlChange={handleCoverUpload}
+                  currentUrl={formData.coverImageUrl}
                   folder="restaurant"
                   purpose="restaurant-cover"
                 />
@@ -214,6 +214,7 @@ const RestaurantForm = ({
 
 const Restaurant = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(
     null
   );
@@ -255,6 +256,7 @@ const Restaurant = () => {
       return { success: true };
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["restaurants"] });
       toast({
         title: "Sucesso",
         description: "Restaurante criado com sucesso!",
@@ -297,6 +299,7 @@ const Restaurant = () => {
       return { success: true };
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["restaurants"] });
       toast({
         title: "Sucesso",
         description: "Restaurante atualizado com sucesso!",
@@ -330,6 +333,7 @@ const Restaurant = () => {
       return { success: true };
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["restaurants"] });
       toast({
         title: "Sucesso",
         description: "Restaurante excluído com sucesso!",
@@ -348,39 +352,25 @@ const Restaurant = () => {
     },
   });
 
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { data: restaurants, isLoading } = useQuery({
+    queryKey: ["restaurants"],
+    queryFn: async () => {
+      console.log("Consultando restaurantes...");
 
-  useEffect(() => {
-    const fetchRestaurants = async () => {
-      setIsLoading(true);
-      setLoadError(null);
-      
-      try {
-        const { data, error } = await supabase
-          .from("Restaurant")
-          .select("*")
-          .order("createdAt", { ascending: false });
-        
-        if (error) {
-          console.error("Erro ao buscar restaurantes:", error);
-          setLoadError("Não foi possível carregar os restaurantes");
-          setRestaurants([]);
-        } else {
-          setRestaurants(data || []);
-        }
-      } catch (e) {
-        console.error("Exceção ao buscar restaurantes:", e);
-        setLoadError("Ocorreu um erro ao carregar os dados");
-        setRestaurants([]);
-      } finally {
-        setIsLoading(false);
+      const { data, error } = await supabase
+        .from("Restaurant")
+        .select("*")
+        .order("createdAt", { ascending: false });
+
+      if (error) {
+        console.error("Erro ao consultar restaurantes:", error);
+        throw new Error("Não foi possível carregar os restaurantes");
       }
-    };
 
-    fetchRestaurants();
-  }, []);
+      console.log("Dados de restaurantes obtidos:", data);
+      return data as Restaurant[];
+    },
+  });
 
   const handleSubmit = async (data: RestaurantFormData) => {
     setIsSubmitting(true);
@@ -466,10 +456,6 @@ const Restaurant = () => {
           <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
           <p>Carregando restaurantes...</p>
         </div>
-      ) : loadError ? (
-        <div className="text-center py-10 border rounded-lg">
-          <p className="text-muted-foreground">{loadError}</p>
-        </div>
       ) : restaurants && restaurants.length > 0 ? (
         <div className="border rounded-lg">
           <Table>
@@ -485,19 +471,15 @@ const Restaurant = () => {
               {restaurants.map((restaurant) => (
                 <TableRow key={restaurant.id}>
                   <TableCell className="font-medium">
-                    {restaurant.name || "Sem nome"}
+                    {restaurant.name}
                   </TableCell>
                   <TableCell>
-                    {restaurant.description 
-                      ? (restaurant.description.length > 100
-                          ? `${restaurant.description.substring(0, 100)}...`
-                          : restaurant.description)
-                      : "Sem descrição"}
+                    {restaurant.description.length > 100
+                      ? `${restaurant.description.substring(0, 100)}...`
+                      : restaurant.description}
                   </TableCell>
                   <TableCell>
-                    {restaurant.createdAt 
-                      ? format(new Date(restaurant.createdAt), "dd/MM/yyyy") 
-                      : "Data desconhecida"}
+                    {format(new Date(restaurant.createdAt), "dd/MM/yyyy")}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
