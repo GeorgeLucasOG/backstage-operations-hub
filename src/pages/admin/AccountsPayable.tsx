@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import {
   Table,
   TableBody,
@@ -60,19 +60,28 @@ const AccountsPayablePage = () => {
   const { data: accountsPayable, isLoading, refetch } = useQuery({
     queryKey: ["accountsPayable"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("AccountsPayable")
-        .select("*")
-        .order("createdAt", { ascending: false });
+      console.log("Consultando contas a pagar...");
+      
+      try {
+        const { data, error } = await supabase
+          .from("AccountsPayable")
+          .select("*")
+          .order("createdAt", { ascending: false });
 
-      if (error) {
-        console.error("Erro ao consultar contas a pagar:", error);
-        throw new Error("Não foi possível carregar as contas a pagar");
+        if (error) {
+          console.error("Erro ao consultar contas a pagar:", error);
+          throw new Error(`Erro ao consultar contas a pagar: ${error.message}`);
+        }
+
+        console.log("Dados de contas a pagar obtidos:", data);
+        return data as AccountsPayable[];
+      } catch (error) {
+        console.error("Erro na consulta:", error);
+        throw error;
       }
-
-      console.log("Dados de contas a pagar obtidos:", data);
-      return data as AccountsPayable[];
     },
+    retry: 1,
+    retryDelay: 1000,
   });
 
   const updateMutation = useMutation({
