@@ -24,39 +24,92 @@ export const supabaseOperations = {
     }
   },
 
-  // Generic query helper with error handling
-  async query<T>(
-    table: string,
-    select: string = '*',
-    options: {
-      orderBy?: { column: string; ascending?: boolean };
-      limit?: number;
-      filters?: Record<string, any>;
-    } = {}
-  ): Promise<{ data: T[] | null; error: any }> {
+  // Get restaurants
+  async getRestaurants() {
     try {
-      let query = supabase.from(table).select(select);
-
-      if (options.filters) {
-        Object.entries(options.filters).forEach(([key, value]) => {
-          query = query.eq(key, value);
-        });
-      }
-
-      if (options.orderBy) {
-        query = query.order(options.orderBy.column, { 
-          ascending: options.orderBy.ascending ?? false 
-        });
-      }
-
-      if (options.limit) {
-        query = query.limit(options.limit);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabase
+        .from('Restaurant')
+        .select('*')
+        .order('createdAt', { ascending: false });
+      
       return { data, error };
     } catch (error) {
-      console.error(`Error querying ${table}:`, error);
+      console.error('Error fetching restaurants:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Get categories
+  async getCategories() {
+    try {
+      const { data, error } = await supabase
+        .from('MenuCategory')
+        .select('*, Restaurant(name)')
+        .order('name', { ascending: true });
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Get products
+  async getProducts() {
+    try {
+      const { data, error } = await supabase
+        .from('Product')
+        .select('*, MenuCategory(name), Restaurant(name)')
+        .order('createdAt', { ascending: false });
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Get orders
+  async getOrders() {
+    try {
+      const { data, error } = await supabase
+        .from('Order')
+        .select('*, OrderProduct(*, Product(name, price)), Restaurant(name)')
+        .order('createdAt', { ascending: false });
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Get accounts receivable
+  async getAccountsReceivable() {
+    try {
+      const { data, error } = await supabase
+        .from('AccountsReceivable')
+        .select('*, Restaurant(name)')
+        .order('createdAt', { ascending: false });
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching accounts receivable:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Get accounts payable
+  async getAccountsPayable() {
+    try {
+      const { data, error } = await supabase
+        .from('AccountsPayable')
+        .select('*, Restaurant(name)')
+        .order('createdAt', { ascending: false });
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching accounts payable:', error);
       return { data: null, error };
     }
   }

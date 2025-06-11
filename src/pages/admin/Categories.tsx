@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +40,7 @@ interface Category {
   restaurantId: string;
   createdAt: string;
   updatedAt: string;
+  Restaurant?: { name: string };
 }
 
 interface CategoryFormData {
@@ -48,7 +50,6 @@ interface CategoryFormData {
 
 // Função para gerar UUID v4
 function generateUUID() {
-  // Implementação simples de UUID v4
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
     const r = (Math.random() * 16) | 0;
     const v = c === "x" ? r : (r & 0x3) | 0x8;
@@ -65,26 +66,21 @@ const CategoryForm = ({
   initialData?: Category | null;
   restaurants: Restaurant[];
 }) => {
-  console.log("Recebendo dados iniciais para o formulário:", initialData);
+  console.log("CategoryForm - initialData:", initialData);
+  console.log("CategoryForm - restaurants:", restaurants);
 
-  // Se não tiver restaurantId e houver restaurantes disponíveis, seleciona o primeiro
   const getInitialFormData = () => {
     if (initialData) {
-      console.log("Usando dados iniciais fornecidos:", initialData);
       return {
         name: initialData.name,
         restaurantId: initialData.restaurantId,
       };
     } else if (restaurants && restaurants.length > 0) {
-      console.log(
-        "Criando novo formulário com primeiro restaurante selecionado"
-      );
       return {
         name: "",
-        restaurantId: restaurants[0].id, // Seleciona o primeiro restaurante por padrão
+        restaurantId: restaurants[0].id,
       };
     } else {
-      console.log("Criando formulário vazio");
       return {
         name: "",
         restaurantId: "",
@@ -92,19 +88,12 @@ const CategoryForm = ({
     }
   };
 
-  const [formData, setFormData] = useState<CategoryFormData>(
-    getInitialFormData()
-  );
-
-  // Verifica se há restaurantes disponíveis
+  const [formData, setFormData] = useState<CategoryFormData>(getInitialFormData());
   const hasRestaurants = restaurants && restaurants.length > 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    console.log("Enviando formulário com dados:", formData);
-
-    // Validações adicionais antes de enviar
+    
     if (!formData.name.trim()) {
       alert("O nome da categoria é obrigatório");
       return;
@@ -118,12 +107,6 @@ const CategoryForm = ({
     onSubmit(formData);
   };
 
-  const handleSelectRestaurant = (value: string) => {
-    console.log("Restaurante selecionado:", value);
-    setFormData({ ...formData, restaurantId: value });
-  };
-
-  // Se não houver restaurantes, mostra uma mensagem
   if (!hasRestaurants) {
     return (
       <div className="py-4 text-center">
@@ -154,7 +137,7 @@ const CategoryForm = ({
         </label>
         <Select
           value={formData.restaurantId}
-          onValueChange={handleSelectRestaurant}
+          onValueChange={(value) => setFormData({ ...formData, restaurantId: value })}
           required
         >
           <SelectTrigger>
@@ -190,76 +173,60 @@ const Categories = () => {
   } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
-      console.log("Buscando categorias do banco de dados...");
-
+      console.log("Fetching categories...");
       const { data, error } = await supabase
         .from("MenuCategory")
-        .select("*, Restaurant:restaurantId(name)")
+        .select("*, Restaurant(name)")
         .order("createdAt", { ascending: false });
 
       if (error) {
-        console.error("Erro ao buscar categorias:", error);
+        console.error("Error fetching categories:", error);
         throw error;
       }
 
-      console.log("Categorias encontradas:", data);
-      if (data && data.length > 0) {
-        console.log(
-          "Detalhes da primeira categoria:",
-          JSON.stringify(data[0], null, 2)
-        );
-        console.log("Restaurante vinculado:", data[0].Restaurant);
-      }
-
-      return data as (Category & { Restaurant: { name: string } })[];
+      console.log("Categories fetched:", data);
+      return data as Category[];
     },
   });
 
   const { data: restaurants, isLoading: isLoadingRestaurants } = useQuery({
     queryKey: ["restaurants"],
     queryFn: async () => {
-      console.log("Buscando restaurantes do banco de dados...");
-
+      console.log("Fetching restaurants...");
       const { data, error } = await supabase
         .from("Restaurant")
         .select("id, name")
         .order("name");
 
       if (error) {
-        console.error("Erro ao buscar restaurantes:", error);
+        console.error("Error fetching restaurants:", error);
         throw error;
       }
 
-      console.log("Restaurantes encontrados:", data);
+      console.log("Restaurants fetched:", data);
       return data as Restaurant[];
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (newCategory: CategoryFormData) => {
-      try {
-        console.log("Criando nova categoria:", newCategory);
-        const now = new Date().toISOString();
-        const completeCategory = {
-          ...newCategory,
-          id: generateUUID(),
-          createdAt: now,
-          updatedAt: now,
-        };
+      console.log("Creating category:", newCategory);
+      const now = new Date().toISOString();
+      const completeCategory = {
+        ...newCategory,
+        id: generateUUID(),
+        createdAt: now,
+        updatedAt: now,
+      };
 
-        const { data, error } = await supabase
-          .from("MenuCategory")
-          .insert([completeCategory])
-          .select()
-          .single();
+      const { data, error } = await supabase
+        .from("MenuCategory")
+        .insert([completeCategory])
+        .select()
+        .single();
 
-        if (error) throw error;
-        console.log("Categoria criada com sucesso:", data);
-        return data;
-      } catch (error) {
-        console.error("Erro durante a criação da categoria:", error);
-        throw error;
-      }
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
@@ -269,67 +236,32 @@ const Categories = () => {
       });
     },
     onError: (error) => {
-      console.error("Erro ao criar categoria:", error);
+      console.error("Error creating category:", error);
       toast({
         title: "Erro",
-        description:
-          error instanceof Error
-            ? `Erro ao criar categoria: ${error.message}`
-            : "Erro desconhecido ao criar categoria",
+        description: `Erro ao criar categoria: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
         variant: "destructive",
       });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      ...updateData
-    }: CategoryFormData & { id: string }) => {
-      try {
-        console.log("Atualizando categoria:", id, updateData);
+    mutationFn: async ({ id, ...updateData }: CategoryFormData & { id: string }) => {
+      console.log("Updating category:", id, updateData);
+      
+      const updatedCategory = {
+        ...updateData,
+        updatedAt: new Date().toISOString(),
+      };
 
-        // Validações básicas
-        if (!updateData.name || updateData.name.trim() === "") {
-          throw new Error("O nome da categoria é obrigatório");
-        }
+      const { data, error } = await supabase
+        .from("MenuCategory")
+        .update(updatedCategory)
+        .eq("id", id)
+        .select();
 
-        if (!updateData.restaurantId) {
-          throw new Error("É necessário selecionar um restaurante");
-        }
-
-        // Adicionar o campo updatedAt
-        const updatedCategory = {
-          ...updateData,
-          updatedAt: new Date().toISOString(),
-        };
-
-        console.log("Payload de atualização:", updatedCategory);
-
-        const { data, error } = await supabase
-          .from("MenuCategory")
-          .update(updatedCategory)
-          .eq("id", id)
-          .select();
-
-        if (error) {
-          console.error(
-            "Erro detalhado do Supabase:",
-            JSON.stringify(error, null, 2)
-          );
-          throw new Error(`Erro ao atualizar categoria: ${error.message}`);
-        }
-
-        if (!data || data.length === 0) {
-          throw new Error("Categoria não encontrada ou não foi atualizada");
-        }
-
-        console.log("Categoria atualizada com sucesso:", data[0]);
-        return data[0];
-      } catch (error) {
-        console.error("Erro durante a atualização da categoria:", error);
-        throw error;
-      }
+      if (error) throw error;
+      return data[0];
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
@@ -340,13 +272,10 @@ const Categories = () => {
       });
     },
     onError: (error) => {
-      console.error("Erro ao atualizar categoria:", error);
+      console.error("Error updating category:", error);
       toast({
         title: "Erro",
-        description:
-          error instanceof Error
-            ? `Erro ao atualizar categoria: ${error.message}`
-            : "Erro desconhecido ao atualizar categoria",
+        description: `Erro ao atualizar categoria: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
         variant: "destructive",
       });
     },
@@ -354,19 +283,13 @@ const Categories = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      try {
-        console.log("Excluindo categoria:", id);
-        const { error } = await supabase
-          .from("MenuCategory")
-          .delete()
-          .eq("id", id);
+      console.log("Deleting category:", id);
+      const { error } = await supabase
+        .from("MenuCategory")
+        .delete()
+        .eq("id", id);
 
-        if (error) throw error;
-        console.log("Categoria excluída com sucesso");
-      } catch (error) {
-        console.error("Erro durante a exclusão da categoria:", error);
-        throw error;
-      }
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
@@ -376,13 +299,10 @@ const Categories = () => {
       });
     },
     onError: (error) => {
-      console.error("Erro ao excluir categoria:", error);
+      console.error("Error deleting category:", error);
       toast({
         title: "Erro",
-        description:
-          error instanceof Error
-            ? `Erro ao excluir categoria: ${error.message}`
-            : "Erro desconhecido ao excluir categoria",
+        description: `Erro ao excluir categoria: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
         variant: "destructive",
       });
     },
@@ -393,6 +313,24 @@ const Categories = () => {
       deleteMutation.mutate(id);
     }
   };
+
+  if (isLoadingCategories || isLoadingRestaurants) {
+    return <div className="py-8 text-center">Carregando...</div>;
+  }
+
+  if (isError) {
+    return (
+      <div className="py-8 rounded-lg border-red-200 border p-4 bg-red-50 text-red-700 flex items-center">
+        <AlertCircle className="h-5 w-5 mr-2" />
+        <div>
+          <p className="font-medium">Erro ao carregar categorias</p>
+          <p className="text-sm">
+            {error instanceof Error ? error.message : "Erro desconhecido"}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -416,29 +354,12 @@ const Categories = () => {
                   restaurants={restaurants}
                 />
               )}
-              {createMutation.isPending && (
-                <div className="mt-4 text-center text-gray-600">
-                  <p>Criando categoria...</p>
-                </div>
-              )}
             </div>
           </SheetContent>
         </Sheet>
       </div>
 
-      {isLoadingCategories || isLoadingRestaurants ? (
-        <div className="py-8 text-center">Carregando...</div>
-      ) : isError ? (
-        <div className="py-8 rounded-lg border-red-200 border p-4 bg-red-50 text-red-700 flex items-center">
-          <AlertCircle className="h-5 w-5 mr-2" />
-          <div>
-            <p className="font-medium">Erro ao carregar categorias</p>
-            <p className="text-sm">
-              {error instanceof Error ? error.message : "Erro desconhecido"}
-            </p>
-          </div>
-        </div>
-      ) : categories && categories.length === 0 ? (
+      {categories && categories.length === 0 ? (
         <div className="py-8 text-center text-gray-500">
           Nenhuma categoria encontrada. Crie uma nova categoria para começar.
         </div>
@@ -466,19 +387,7 @@ const Categories = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              console.log(
-                                "Categoria selecionada para edição:",
-                                category
-                              );
-                              setEditingCategory({
-                                id: category.id,
-                                name: category.name,
-                                restaurantId: category.restaurantId,
-                                createdAt: category.createdAt,
-                                updatedAt: category.updatedAt,
-                              });
-                            }}
+                            onClick={() => setEditingCategory(category)}
                           >
                             Editar
                           </Button>
@@ -492,10 +401,6 @@ const Categories = () => {
                               <CategoryForm
                                 initialData={editingCategory}
                                 onSubmit={(data) => {
-                                  console.log(
-                                    "Enviando dados de atualização:",
-                                    { ...data, id: editingCategory.id }
-                                  );
                                   updateMutation.mutate({
                                     ...data,
                                     id: editingCategory.id,
@@ -503,23 +408,6 @@ const Categories = () => {
                                 }}
                                 restaurants={restaurants}
                               />
-                            )}
-                            {updateMutation.isPending && (
-                              <div className="mt-4 text-center text-gray-600">
-                                <p>Atualizando categoria...</p>
-                              </div>
-                            )}
-                            {updateMutation.isError && (
-                              <div className="mt-4 p-2 bg-red-50 text-red-700 rounded border border-red-200">
-                                <p className="font-medium">
-                                  Erro ao atualizar categoria
-                                </p>
-                                <p className="text-sm">
-                                  {updateMutation.error instanceof Error
-                                    ? updateMutation.error.message
-                                    : "Erro desconhecido"}
-                                </p>
-                              </div>
                             )}
                           </div>
                         </SheetContent>

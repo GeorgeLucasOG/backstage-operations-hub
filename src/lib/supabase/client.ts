@@ -26,7 +26,7 @@ export const supabaseHelpers = {
   async getProducts() {
     const { data, error } = await supabase
       .from('Product')
-      .select('*, MenuCategory(*)')
+      .select('*, MenuCategory(name), Restaurant(name)')
       .order('createdAt', { ascending: false });
     
     if (error) throw error;
@@ -48,7 +48,7 @@ export const supabaseHelpers = {
   async getOrders() {
     const { data, error } = await supabase
       .from('Order')
-      .select('*, OrderProduct(*, Product(*))')
+      .select('*, OrderProduct(*, Product(name, price)), Restaurant(name)')
       .order('createdAt', { ascending: false });
     
     if (error) throw error;
@@ -59,7 +59,7 @@ export const supabaseHelpers = {
   async getAccountsReceivable() {
     const { data, error } = await supabase
       .from('AccountsReceivable')
-      .select('*')
+      .select('*, Restaurant(name)')
       .order('createdAt', { ascending: false });
     
     if (error) throw error;
@@ -70,7 +70,7 @@ export const supabaseHelpers = {
   async getAccountsPayable() {
     const { data, error } = await supabase
       .from('AccountsPayable')
-      .select('*')
+      .select('*, Restaurant(name)')
       .order('createdAt', { ascending: false });
     
     if (error) throw error;
