@@ -1,3 +1,4 @@
+
 /**
  * Funções para processamento de imagens
  */
@@ -11,10 +12,19 @@ interface ImageConfig {
   mode: "contain" | "cover" | "stretch";
 }
 
+// Interface para configurações de API
+interface ImageProcessingSettings {
+  enabled: boolean;
+  provider: string;
+  cloudName?: string;
+  endpoint?: string;
+  apiKey?: string;
+}
+
 /**
  * Obter configurações de API para processamento de imagens
  */
-export async function getImageProcessingSettings() {
+export async function getImageProcessingSettings(): Promise<ImageProcessingSettings> {
   try {
     const { data, error } = await supabase
       .from("ApiSettings")
@@ -34,7 +44,14 @@ export async function getImageProcessingSettings() {
       return { enabled: false, provider: "internal" };
     }
 
-    return data[0].imageProcessing;
+    const settings = data[0].imageProcessing as any;
+    return {
+      enabled: settings?.enabled || false,
+      provider: settings?.provider || "internal",
+      cloudName: settings?.cloudName,
+      endpoint: settings?.endpoint,
+      apiKey: settings?.apiKey,
+    };
   } catch (error) {
     console.error("Erro ao processar configurações:", error);
     return { enabled: false, provider: "internal" };
@@ -43,7 +60,6 @@ export async function getImageProcessingSettings() {
 
 /**
  * Obter configurações de imagem com base no propósito
- * @param purpose Propósito da imagem (avatar, capa, produto)
  */
 export function getImageConfig(purpose: string): ImageConfig {
   switch (purpose) {
@@ -59,32 +75,34 @@ export function getImageConfig(purpose: string): ImageConfig {
 }
 
 /**
- * Processar uma imagem com base em seu propósito e configurações
- * @param imageUrl URL da imagem original
- * @param purpose Propósito da imagem
+ * Interface para resultado do processamento
  */
-export async function processImage(imageUrl: string, purpose: string) {
+interface ProcessResult {
+  success: boolean;
+  publicUrl: string;
+  error?: string;
+  meta?: any;
+}
+
+/**
+ * Processar uma imagem com base em seu propósito e configurações
+ */
+export async function processImage(imageUrl: string, purpose: string): Promise<ProcessResult> {
   try {
     if (!imageUrl) {
       throw new Error("URL de imagem não fornecida");
     }
 
-    // Buscar configurações de processamento
     const settings = await getImageProcessingSettings();
 
-    // Se o processamento estiver desabilitado, retornar a URL original
     if (!settings.enabled) {
-      console.log(
-        "Processamento de imagem desabilitado. Retornando URL original."
-      );
-      return { publicUrl: imageUrl, success: true };
+      console.log("Processamento de imagem desabilitado. Retornando URL original.");
+      return { success: true, publicUrl: imageUrl };
     }
 
-    // Obter configurações com base no propósito
     const config = getImageConfig(purpose);
     console.log(`Processando imagem para ${purpose}:`, config);
 
-    // Diferentes implementações de acordo com o provedor configurado
     switch (settings.provider) {
       case "cloudinary":
         return processWithCloudinary(imageUrl, config, settings);
@@ -99,8 +117,8 @@ export async function processImage(imageUrl: string, purpose: string) {
     console.error("Erro ao processar imagem:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Erro desconhecido",
       publicUrl: imageUrl,
+      error: error instanceof Error ? error.message : "Erro desconhecido",
     };
   }
 }
@@ -111,9 +129,7 @@ export async function processImage(imageUrl: string, purpose: string) {
 async function processWithInternalProvider(
   imageUrl: string,
   config: ImageConfig
-) {
-  // Aqui você implementaria o redimensionamento internamente ou usando uma biblioteca
-  // Como exemplo, vamos apenas adicionar parâmetros à URL original
+): Promise<ProcessResult> {
   const separator = imageUrl.includes("?") ? "&" : "?";
   const processedUrl = `${imageUrl}${separator}width=${config.width}&height=${config.height}&resize=${config.mode}`;
 
@@ -135,21 +151,17 @@ async function processWithInternalProvider(
 async function processWithCloudinary(
   imageUrl: string,
   config: ImageConfig,
-  settings: any
-) {
-  // Verificar se temos as credenciais necessárias
+  settings: ImageProcessingSettings
+): Promise<ProcessResult> {
   if (!settings.cloudName) {
     console.warn("Cloud Name do Cloudinary não configurado");
     return processWithInternalProvider(imageUrl, config);
   }
 
   try {
-    // Gerar uma URL de transformação do Cloudinary
-    // Exemplo: https://res.cloudinary.com/minha-cloud/image/fetch/c_fill,w_300,h_200/https://exemplo.com/imagem.jpg
     const cloudinaryBaseUrl = `https://res.cloudinary.com/${settings.cloudName}/image/fetch`;
     const transformations = [];
 
-    // Adicionar transformações com base no mode
     if (config.mode === "contain") {
       transformations.push("c_fit");
     } else if (config.mode === "cover") {
@@ -158,13 +170,9 @@ async function processWithCloudinary(
       transformations.push("c_scale");
     }
 
-    // Adicionar dimensões
     transformations.push(`w_${config.width},h_${config.height}`);
-
-    // Adicionar formato (webp para melhor performance)
     transformations.push("f_auto,q_auto");
 
-    // Montar a URL final
     const transformationString = transformations.join(",");
     const processedUrl = `${cloudinaryBaseUrl}/${transformationString}/${encodeURIComponent(
       imageUrl
@@ -193,22 +201,17 @@ async function processWithCloudinary(
 async function processWithImgix(
   imageUrl: string,
   config: ImageConfig,
-  settings: any
-) {
-  // Verificar se temos as credenciais necessárias
+  settings: ImageProcessingSettings
+): Promise<ProcessResult> {
   if (!settings.endpoint) {
     console.warn("Endpoint do Imgix não configurado");
     return processWithInternalProvider(imageUrl, config);
   }
 
   try {
-    // Remover qualquer trailing slash do endpoint
     const endpoint = settings.endpoint.replace(/\/$/, "");
-
-    // Parâmetros Imgix
     const params = new URLSearchParams();
 
-    // Configurar o modo de redimensionamento
     if (config.mode === "contain") {
       params.append("fit", "max");
     } else if (config.mode === "cover") {
@@ -218,16 +221,10 @@ async function processWithImgix(
       params.append("fit", "scale");
     }
 
-    // Adicionar dimensões
     params.append("w", config.width.toString());
     params.append("h", config.height.toString());
-
-    // Otimização e formato
     params.append("auto", "format,compress");
 
-    // Montar a URL
-    // Imgix pode usar proxy ou origem direta
-    // Aqui estamos usando proxy (encodeURIComponent para a URL original)
     const processedUrl = `${endpoint}/${encodeURIComponent(
       imageUrl
     )}?${params.toString()}`;
@@ -255,16 +252,14 @@ async function processWithImgix(
 async function processWithCustomProvider(
   imageUrl: string,
   config: ImageConfig,
-  settings: any
-) {
-  // Verificar se temos o endpoint necessário
+  settings: ImageProcessingSettings
+): Promise<ProcessResult> {
   if (!settings.endpoint) {
     console.warn("Endpoint personalizado não configurado");
     return processWithInternalProvider(imageUrl, config);
   }
 
   try {
-    // Fazer requisição para o endpoint personalizado
     const response = await fetch(settings.endpoint, {
       method: "POST",
       headers: {
@@ -310,7 +305,7 @@ async function processWithCustomProvider(
 export async function convertToWebp(options: {
   imageUrl: string;
   purpose?: string;
-}) {
+}): Promise<ProcessResult> {
   const { imageUrl, purpose = "default" } = options;
 
   try {

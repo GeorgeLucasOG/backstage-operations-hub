@@ -11,3 +11,53 @@ export const supabase = createClient<Database>(DATABASE_CONFIG.url, DATABASE_CON
 
 // Default restaurant ID to use throughout the application
 export const DEFAULT_RESTAURANT_ID = "d2d5278d-8df1-4819-87a0-f23b519e3f2a";
+
+// Helper functions for common operations
+export const supabaseOperations = {
+  // Test connection
+  async testConnection() {
+    try {
+      const { data, error } = await supabase.from('Restaurant').select('id').limit(1);
+      return { success: !error, error };
+    } catch (error) {
+      return { success: false, error };
+    }
+  },
+
+  // Generic query helper with error handling
+  async query<T>(
+    table: string,
+    select: string = '*',
+    options: {
+      orderBy?: { column: string; ascending?: boolean };
+      limit?: number;
+      filters?: Record<string, any>;
+    } = {}
+  ): Promise<{ data: T[] | null; error: any }> {
+    try {
+      let query = supabase.from(table).select(select);
+
+      if (options.filters) {
+        Object.entries(options.filters).forEach(([key, value]) => {
+          query = query.eq(key, value);
+        });
+      }
+
+      if (options.orderBy) {
+        query = query.order(options.orderBy.column, { 
+          ascending: options.orderBy.ascending ?? false 
+        });
+      }
+
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+
+      const { data, error } = await query;
+      return { data, error };
+    } catch (error) {
+      console.error(`Error querying ${table}:`, error);
+      return { data: null, error };
+    }
+  }
+};
