@@ -386,6 +386,9 @@ const Restaurant = () => {
         title: "Sucesso",
         description: "Restaurante excluído com sucesso!",
       });
+
+      // Atualiza a listagem após excluir
+      await fetchRestaurants();
     } finally {
       setIsSubmitting(false);
       setIsDeleteDialogOpen(false);
@@ -514,55 +517,13 @@ const Restaurant = () => {
                         </Button>
                       )}
                       {user?.role === "admin" && (
-                        <Dialog
-                          open={
-                            isDeleteDialogOpen &&
-                            restaurantToDelete?.id === restaurant.id
-                          }
-                          onOpenChange={() => setIsDeleteDialogOpen(false)}
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(restaurant)}
                         >
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDelete(restaurant)}
-                            >
-                              Excluir
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Confirmar exclusão</DialogTitle>
-                              <DialogDescription>
-                                Tem certeza que deseja excluir o restaurante "
-                                {restaurant.name}"? Esta ação não pode ser
-                                desfeita.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="flex justify-end space-x-2 mt-4">
-                              <Button
-                                variant="outline"
-                                onClick={() => setIsDeleteDialogOpen(false)}
-                              >
-                                Cancelar
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                onClick={confirmDelete}
-                                disabled={isSubmitting}
-                              >
-                                {isSubmitting ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Excluindo...
-                                  </>
-                                ) : (
-                                  "Excluir"
-                                )}
-                              </Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                          Excluir
+                        </Button>
                       )}
                     </div>
                   </TableCell>
@@ -621,6 +582,41 @@ const Restaurant = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o restaurante "
+              {restaurantToDelete?.name}"? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                "Excluir"
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
