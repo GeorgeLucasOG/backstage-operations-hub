@@ -312,6 +312,7 @@ const Restaurant = () => {
         title: "Sucesso",
         description: "Restaurante criado com sucesso!",
       });
+      await fetchRestaurants(); // Recarrega a lista de restaurantes após a criação
     } finally {
       setIsSubmitting(false);
       setIsFormOpen(false);
@@ -350,6 +351,7 @@ const Restaurant = () => {
         title: "Sucesso",
         description: "Restaurante atualizado com sucesso!",
       });
+      await fetchRestaurants(); // Recarrega a lista de restaurantes após a atualização
     } finally {
       setIsSubmitting(false);
       setIsEditFormOpen(false);
